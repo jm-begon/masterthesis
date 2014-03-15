@@ -4,6 +4,8 @@
 """
 A script to run the random and convolution classifcation
 """
+from time import time
+
 from sklearn.ensemble import ExtraTreesClassifier
 
 from CoordinatorFactory import coordinatorRandConvFactory
@@ -104,16 +106,49 @@ if __name__ == "__main__":
 
     #=====COMPUTATION=====#
     #--Learning--#
+    start = time()
     classifier.fit(learningSet)
+    end = time()
 
     #--Testing--#
     y_truth = testingSet.getLabels()
     y_pred = classifier.predict(testingSet)
     accuracy = classifier.accuracy(y_pred, y_truth)
 
-    print y_truth
-    print y_pred
-    print "========================================="
-    print "Accuracy:\t", accuracy
+    print ">>>>>First 50<<<<<<"
+    for i in xrange(min((50, len(y_pred)))):
+        print y_pred[i], y_truth[i]
 
-    print classifier.predict_proba(testingSet)
+    print "========================================="
+    print "-----------Filtering--------------"
+    print "nb_filters", nb_filters
+    print "filter_min_val", filter_min_val
+    print "filter_max_val", filter_max_val
+    print "filterMinSize", filterMinSize
+    print "filterMaxSize", filterMaxSize
+    print "filterNormalisation", filterNormalisation
+    print "----------Pooling--------------"
+    print "aggregatorNeighborhoodWidth", aggregatorNeighborhoodWidth
+    print "aggregatorNeighbordhoodHeight", aggregatorNeighbordhoodHeight
+    print "--------SW extractor----------"
+    print "#Subwindows", nbSubwindows
+    print "subwindowMinSizeRatio", subwindowMinSizeRatio
+    print "subwindowMaxSizeRatio", subwindowMaxSizeRatio
+    print "subwindowTargetWidth", subwindowTargetWidth
+    print "subwindowTargetHeight", subwindowTargetHeight
+    print "fixedSize", fixedSize
+    print "------------Misc-----------------"
+    print "includeOriginalImage", includeOriginalImage
+    print "nbJobs", nbJobs
+    print "--------ExtraTrees----------"
+    print "nbTrees", nbTrees
+    print "maxFeatures", maxFeatures
+    print "maxDepth", maxDepth
+    print "minSamplesSplit", minSamplesSplit
+    print "minSamplesLeaf", minSamplesLeaf
+    print "bootstrap", bootstrap
+    print "nbJobsEstimator", nbJobsEstimator
+    print "randomState", randomState
+    print "-------------------------------"
+    print "Time", (end-start), "seconds"
+    print "Accuracy", accuracy

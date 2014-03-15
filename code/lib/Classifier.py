@@ -16,12 +16,6 @@ class Classifier:
     an :class:`ImageBuffer` and feed it to a **scikit-learn base classifier**.
     The :class:`Classifier` can take care of multiple feature vectors per
     object.
-
-    Note
-    ----
-    Internally, the labels will go from 0 to N-1, where N correspond to the
-    number of different input labels. The order is preserved. The labels
-    returned will follow this convention.
     """
     def __init__(self, coordinator, base_classifier):
         """
@@ -37,6 +31,50 @@ class Classifier:
         """
         self._classifier = base_classifier
         self._coord = coordinator
+        self._classifToUserLUT = []
+        self._userToClassifLUT = {}
+
+    def _buildLUT(self, y_user):
+#        """
+#        Builds the lookup tables for converting user labels to/from
+#        classifier label
+#
+#        Parameters
+#        ----------
+#        y_user : list
+#            the list of user labels
+#        """
+        userLabels = np.unique(y_user)
+        self._classifToUserLUT = userLabels
+        self._userToClassifLUT = {j: i for i, j in enumerate(userLabels)}
+
+    def _convertLabel(self, y_user):
+#        """
+#        Convert labels from the user labels to the internal labels
+#        Parameters
+#        ----------
+#        y_user : list
+#            list of user labels to convert into internal labels
+#        Returns
+#        -------
+#        y_classif : list
+#            the corresponding internal labels
+#        """
+        return [self._userToClassifLUT[x] for x in y_user]
+
+    def _convertLabelsBackToUser(self, y_classif):
+#        """
+#        Convert labels back to the user labels
+#        Parameters
+#        ----------
+#        y_classif : list
+#            list of internal labels to convert
+#        Returns
+#        -------
+#        y_user : list
+#            the corresponding user labels
+#        """
+        return [self._classifToUserLUT[x] for x in y_classif]
 
     def fit(self, image_buffer):
         """
@@ -52,12 +90,17 @@ class Classifier:
         self : :class:`Classifier`
             This instance
         """
-        X, y = self._coord.process(image_buffer)
-        # Count the number of classes
-        self.classes_ = np.unique(y)
-        self.n_classes_ = len(self.classes_)
-        y = np.searchsorted(self.classes_, y)
+        #Updating the labels
+        y_user = image_buffer.getLabels()
+        self._buildLUT(y_user)
 
+        #Extracting the features
+        X, y_user = self._coord.process(image_buffer)
+
+        #Converting the labels
+        y = self._convertLabel(y_user)
+
+        #Delegating the classification
         self._classifier.fit(X, y)
 
         return self
@@ -75,10 +118,9 @@ class Classifier:
         -------
         list : list of int
             each entry is the classification label corresponding to the input
-            of the same index as computed by the base classifier
         """
-        return self.classes_.take(
-            np.argmax(self.predict_proba(image_buffer), axis=1),  axis=0)
+        y_classif = np.argmax(self.predict_proba(image_buffer), axis=1)
+        return self._convertLabelsBackToUser(y_classif)
 
     def predict_proba(self, image_buffer):
         """
@@ -97,16 +139,17 @@ class Classifier:
             each entry is the probability vector of the input of the same
             index as computed by the base classifier
         """
+
         X_pred, _ = self._coord.process(image_buffer)
 
-        aggreg = len(X_pred)/len(image_buffer)
+        nbFactor = len(X_pred)/len(image_buffer)
 
-        y = np.zeros((len(image_buffer), self.n_classes_))
+        y = np.zeros((len(image_buffer), len(self._userToClassifLUT)))
 
         _y = self._classifier.predict_proba(X_pred)
 
         for i in xrange(len(image_buffer)):
-                y[i] = np.sum(_y[i * aggreg:(i + 1) * aggreg], axis=0) / aggreg
+                y[i] = np.sum(_y[i * nbFactor:(i + 1) * nbFactor], axis=0) / nbFactor
 
         return y
 
@@ -126,4 +169,4 @@ class Classifier:
         accuracy : float
             the accuracy
         """
-        return sum( map( (lambda x,y:x==y), y_pred, y_truth ) )/len(y_truth)
+        return sum(map((lambda x, y: x == y), y_pred, y_truth))/float(len(y_truth))

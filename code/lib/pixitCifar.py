@@ -4,6 +4,7 @@
 """
 A script to run the pixit classification.
 """
+from time import time
 
 from CoordinatorFactory import coordinatorPixitFactory
 from sklearn.ensemble import ExtraTreesClassifier
@@ -16,8 +17,8 @@ if __name__ == "__main__":
 
     #======HYPER PARAMETERS======#
     #PixitCoordinator param
-    nbSubwindows = 10
-    subwindowMinSizeRatio = 0.5
+    nbSubwindows = 100
+    subwindowMinSizeRatio = 0.75
     subwindowMaxSizeRatio = 1.
     subwindowTargetWidth = 16
     subwindowTargetHeight = 16
@@ -34,7 +35,7 @@ if __name__ == "__main__":
     bootstrap = False
     nbJobsEstimator = -1
     randomState = None
-    verbose = 5
+    verbose = 10
 
     #=====DATA=====#
     learningSetDir = "learn/"
@@ -71,20 +72,48 @@ if __name__ == "__main__":
 
     loader = CifarFromNumpies(learningSetDir, learningIndexFile)
     learningSet = FileImageBuffer(loader.getFiles(), NumpyImageLoader())
+    learningSet = learningSet[0:10000]
 
     loader = CifarFromNumpies(testingSetDir, testingIndexFile)
     testingSet = FileImageBuffer(loader.getFiles(), NumpyImageLoader())
+    testingSet = testingSet[0:10000]
 
     #=====COMPUTATION=====#
     #--Learning--#
+    start = time()
     classifier.fit(learningSet)
+    end = time()
 
     #--Testing--#
     y_truth = testingSet.getLabels()
     y_pred = classifier.predict(testingSet)
     accuracy = classifier.accuracy(y_pred, y_truth)
 
+    print ">>>>>First 50<<<<<<"
+    for i in xrange(min((50, len(y_pred)))):
+        print y_pred[i], y_truth[i]
+
     print "========================================="
-    print "Accuracy:\t", accuracy
-    
-    print classifier.predict_proba(testingSet)
+    print "--------SW extractor----------"
+    print "#Subwindows", nbSubwindows
+    print "subwindowMinSizeRatio", subwindowMinSizeRatio
+    print "subwindowMaxSizeRatio", subwindowMaxSizeRatio
+    print "subwindowTargetWidth", subwindowTargetWidth
+    print "subwindowTargetHeight", subwindowTargetHeight
+    print "fixedSize", fixedSize
+    print "nbJobs", nbJobs
+    print "--------ExtraTrees----------"
+    print "nbTrees", nbTrees
+    print "maxFeatures", maxFeatures
+    print "maxDepth", maxDepth
+    print "minSamplesSplit", minSamplesSplit
+    print "minSamplesLeaf", minSamplesLeaf
+    print "bootstrap", bootstrap
+    print "nbJobsEstimator", nbJobsEstimator
+    print "randomState", randomState
+    print "-------------------------------"
+    print "Time", (end-start), "seconds"
+    print "Accuracy", accuracy
+
+#    y_prob = classifier.predict_proba(learningSet)
+#    print y_prob
