@@ -177,5 +177,4 @@ class RandConvCoordinator(Coordinator):
         #Combining the information for all the images
         X = np.vstack((ls))
 
-        print X.shape, len(y)#TODO remove
         return X, y

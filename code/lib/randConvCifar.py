@@ -57,8 +57,12 @@ if __name__ == "__main__":
     verbose = 5
 
     #=====DATA=====#
+    maxLearningSize = 50000
+    learningUse = 100
     learningSetDir = "learn/"
     learningIndexFile = "0index"
+    maxTestingSize = 10000
+    testingUse = 100
     testingSetDir = "test/"
     testingIndexFile = "0index"
 
@@ -100,19 +104,23 @@ if __name__ == "__main__":
     #--Data--
     loader = CifarFromNumpies(learningSetDir, learningIndexFile)
     learningSet = FileImageBuffer(loader.getFiles(), NumpyImageLoader())
+    learningSet[0:learningUse]
 
     loader = CifarFromNumpies(testingSetDir, testingIndexFile)
     testingSet = FileImageBuffer(loader.getFiles(), NumpyImageLoader())
+    testingSet[0:testingUse]
 
     #=====COMPUTATION=====#
     #--Learning--#
-    start = time()
+    fitStart = time()
     classifier.fit(learningSet)
-    end = time()
+    fitEnd = time()
 
     #--Testing--#
     y_truth = testingSet.getLabels()
+    predStart = time()
     y_pred = classifier.predict(testingSet)
+    predEnd = time()
     accuracy = classifier.accuracy(y_pred, y_truth)
 
     print ">>>>>First 50<<<<<<"
@@ -149,6 +157,10 @@ if __name__ == "__main__":
     print "bootstrap", bootstrap
     print "nbJobsEstimator", nbJobsEstimator
     print "randomState", randomState
+    print "------------Data---------------"
+    print "LearningSet size", len(learningSet)
+    print "TestingSet size", len(testingSet)
     print "-------------------------------"
-    print "Time", (end-start), "seconds"
+    print "Fit time", (fitEnd-fitStart), "seconds"
+    print "Fit time", (predEnd-predStart), "seconds"
     print "Accuracy", accuracy
