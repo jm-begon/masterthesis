@@ -24,12 +24,14 @@ class TaskManager:
     """
     def computePartition(self, nbTasks, dataSize):
         """
-        Compute data partitioning for parallel computation.
+        Compute data partitioning for parallel computation :
+        min(nbTasks, dataSize)
 
         Parameters
         ----------
-        nbTasks : int {-1, >0}
-            The parallelization factor. If -1 : the greatest factor is chosen
+        nbTasks : int (!=0)
+            If >0 : the parallelization factor.
+            If <0 : nbTasks = #cpu+nbTasks+1 (-1 -> nbTasks = #cpu)
         dataSize : int > 0
             The size of the data to process
 
@@ -44,9 +46,14 @@ class TaskManager:
         starts : list of int
             The start indexes of the data for each parallel task
         """
-        if nbTasks == -1:
-            nbTasks = min(cpu_count(), dataSize)
+        if nbTasks < 0:
+            cpu = cpu_count()+nbTasks+1
+            if cpu <= 0:
+                cpu = 1
+            nbTasks = min(cpu, dataSize)
         else:
+            if nbTasks == 0:
+                nbTasks = 1
             nbTasks = min(nbTasks, dataSize)
 
         counts = [dataSize / nbTasks] * nbTasks
