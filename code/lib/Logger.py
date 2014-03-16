@@ -6,6 +6,8 @@ A Logging scheme
 """
 
 import sys
+import os
+import time
 from abc import ABCMeta, abstractmethod
 
 __all__ = ["Logger", "StandardLogger", "FileLogger", "ProgressLogger",
@@ -72,6 +74,23 @@ class Logger:
         """
         self.logMsg(errorMsg)
 
+    def appendLN(self, msg):
+        """
+        Append line ending (os.linesep) if necessary.
+
+        Paramters
+        ---------
+        msg : str
+            a message
+
+        Return
+        ------
+        msgLn : str
+            the same message with a new line added if necessary
+        """
+        if not msg.endswith(os.linesep):
+            msg += os.linesep
+
 
 class StandardLogger(Logger):
     def __init__(self, autoFlush=False, verbosity=50):
@@ -91,6 +110,7 @@ class StandardLogger(Logger):
     def logMsg(self, msg, minVerb=1):
         """Overload"""
         if self.verbosity >= minVerb:
+            msg = self.appendLN(msg)
             sys.stdout.write(msg)
             if self._autoFlush:
                 sys.stdout.flush()
@@ -98,6 +118,7 @@ class StandardLogger(Logger):
     def logError(self, msg, minVerb=0):
         """Overload"""
         if self.verbosity >= minVerb:
+            msg = self.appendLN(msg)
             sys.stderr.write(msg)
             if self._autoFlush:
                 sys.stderr.flush()
@@ -130,6 +151,7 @@ class FileLogger(Logger):
     def logMsg(self, msg, minVerb=1):
         """Overload"""
         if self.verbosity >= minVerb:
+            msg = self.appendLN(msg)
             self._str.write(msg)
             if self._autoFlush:
                 self._str.flush()
@@ -137,9 +159,14 @@ class FileLogger(Logger):
     def logError(self, msg, minVerb=0):
         """Overload"""
         if self.verbosity >= minVerb:
+            msg = self.appendLN(msg)
             self._err.write(msg)
             if self._autoFlush:
                 self._err.flush()
+
+    def appendLN(self, msg):
+        if not msg.endswith("\n"):
+            msg += "\n"
 
 
 class ProgressableTask:
@@ -175,6 +202,12 @@ class ProgressableTask:
         self._progress = 0
         self._lastReset = 0
         self._status = ProgressableTask.RUNNING
+        self._endTime = None
+        self._startTime = time.time()
+
+    def getNbSteps(self):
+        """TODO"""
+        return self._nbStep
 
     def update(self, progress):
         """
@@ -195,6 +228,7 @@ class ProgressableTask:
         self._progress = progress
         if progress >= self._nbStep-1:
             self._status = ProgressableTask.DONE
+            self._endTime = time.time()
             return True
         else:
             return False
@@ -220,6 +254,36 @@ class ProgressableTask:
             "progress/nbSteps"
         """
         return str(self._progress)+"/"+str(self._nbStep)
+
+    def duration(self):
+        """
+        Return
+        ------
+        duration : float
+            the duration of taks in seconds (up to now if still running,
+            up to completion if completed)
+        """
+        if self._status == ProgressableTask.DONE:
+            return self._endTime - self._startTime
+        else:
+            return time.time() - self._startTime
+
+
+def formatDuration(duration):
+    """
+    Format the duration as string
+
+    Parameters
+    ----------
+    duration : float
+        a duration in seconds
+    Return
+    ------
+    formated : str
+        the given duration formated
+    """
+    return str(duration) + " s"  # TODO nice formating
+
 
 
 class ProgressLogger(Logger):
@@ -271,7 +335,7 @@ class ProgressLogger(Logger):
             The progression message to log
         """
         loggingMsg = ("Task " + str(task.id) + " '" + task.name + "' : " +
-                      msg + "\n")
+                      msg)
         self.logMsg(loggingMsg)
 
     def addTask(self, nbSteps, name=""):
@@ -315,7 +379,8 @@ class ProgressLogger(Logger):
 
             #Logging the message
             if self.verbosity >= ProgressLogger.TASK_COMPLETION_VERBLVL:
-                self._logProgress(task, "Completion")
+                duration = formatDuration(task.duration())
+                self._logProgress(task, "Completion in " + duration)
         else:
             #Logging the message if necessary
             percProg = task.lastProgress()
@@ -359,7 +424,7 @@ class Progressable(Logger):
         progressLogger : :class:`ProgressLogger` (default : None)
             the object to report to. Can be None (nothing is reported)
         verbosity : int [0,50] (default : 10)
-            the degree of verbosity (the more, the more verbose)
+            the degree of verbosity (the higher, the more verbose)
         """
         Logger.__init__(self, verbosity)
         self.setLogger(progressLogger)
@@ -412,6 +477,13 @@ class Progressable(Logger):
             return
         if self._task is not None:
             self._logger.updateProgress(self._task, progress)
+
+    def endTask(self):
+        """
+        Ends the current task
+        """
+        if self._task is not None:
+            self.updateTaskProgress(self._task.getNbSteps())
 
     def logMsg(self, msg, minVerb=1):
         """Overload"""

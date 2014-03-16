@@ -132,7 +132,7 @@ class PixitCoordinator(Coordinator):
                     self._featureExtractor.extract(convertor.pILToNumpy(img)))
             y = y + [label] * len(imgLs)
             #Logging progress
-            self.updateTaskProgress(i)
+            self.updateTaskProgress(counter)
             counter += 1
         X = np.vstack((ls))
 

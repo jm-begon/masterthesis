@@ -21,7 +21,7 @@ if __name__ == "__main__":
     #======HYPER PARAMETERS======#
     #----RandConv param
     #Filtering
-    nb_filters = 10
+    nb_filters = 100
     filter_min_val = -1
     filter_max_val = 1
     filterMinSize = 3
@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
     #Subwindow
     nbSubwindows = 10
-    subwindowMinSizeRatio = 0.5
+    subwindowMinSizeRatio = 0.75
     subwindowMaxSizeRatio = 1.
     subwindowTargetWidth = 16
     subwindowTargetHeight = 16
@@ -42,9 +42,9 @@ if __name__ == "__main__":
     subwindowInterpolation = SubWindowExtractor.INTERPOLATION_BILINEAR
 
     #Misc.
-    includeOriginalImage = True
-    nbJobs = 1
-    verbosity = 10
+    includeOriginalImage = False
+    nbJobs = -1
+    verbosity = 50
     tempFolder = "temp/"
 
     #-----Extratree param
@@ -54,9 +54,9 @@ if __name__ == "__main__":
     minSamplesSplit = 2
     minSamplesLeaf = 1
     bootstrap = False
-    nbJobsEstimator = -1
+    nbJobsEstimator = 10
     randomState = None
-    verbose = 5
+    verbose = 50
 
     #=====DATA=====#
     maxLearningSize = 50000
@@ -170,5 +170,5 @@ if __name__ == "__main__":
     print "TestingSet size", len(testingSet)
     print "-------------------------------"
     print "Fit time", (fitEnd-fitStart), "seconds"
-    print "Fit time", (predEnd-predStart), "seconds"
+    print "Classifcation time", (predEnd-predStart), "seconds"
     print "Accuracy", accuracy

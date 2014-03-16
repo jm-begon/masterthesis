@@ -99,21 +99,21 @@ class Classifier(Progressable):
         self._buildLUT(y_user)
 
         #Extracting the features
-        self.logMsg("Extracting the features (model creation)...", 35)
+        self.setTask(1, "Extracting the features (model creation)")
 
         X, y_user = self._coord.process(image_buffer)
 
-        self.logMsg("...Feature extraction done (model creation)", 45)
+        self.endTask()
 
         #Converting the labels
         y = self._convertLabel(y_user)
 
         #Delegating the classification
-        self.logMsg("Learning the model...", 35)
+        self.setTask(1, "Learning the model")
 
         self._classifier.fit(X, y)
 
-        self.logMsg("...Model learnt", 45)
+        self.endTask()
 
         return self
 
@@ -152,11 +152,11 @@ class Classifier(Progressable):
             index as computed by the base classifier
         """
         #Extracting the features
-        self.logMsg("Extracting the features (prediction)...", 35)
+        self.setTask(1, "Extracting the features (prediction)")
 
         X_pred, _ = self._coord.process(image_buffer)
 
-        self.logMsg("...Feature extraction done (prediction)", 45)
+        self.endTask()
 
         #Misc.
         nbFactor = len(X_pred)/len(image_buffer)
@@ -164,11 +164,11 @@ class Classifier(Progressable):
         y = np.zeros((len(image_buffer), len(self._userToClassifLUT)))
 
         #Classifying the data
-        self.logMsg("Classifying (prediction)...", 35)
+        self.setTask(1, "Classifying (prediction)")
 
         _y = self._classifier.predict_proba(X_pred)
 
-        self.logMsg("...Classified (prediction)", 45)
+        self.endTask()
 
         for i in xrange(len(image_buffer)):
                 y[i] = np.sum(_y[i * nbFactor:(i + 1) * nbFactor], axis=0) / nbFactor
