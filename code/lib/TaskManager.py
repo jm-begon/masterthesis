@@ -144,7 +144,7 @@ class ParallelCoordinator(Coordinator):
         nbJobs, subImageBuffer = taskManager.partition(self._nbParal,
                                                        imageBuffer)
         #Logging
-        self.logMsg("Starting Parallelization", 35)
+        self.setTask(1, "Starting parallelization")
 
         #Parallelization
         allData = Parallel(n_jobs=nbJobs, verbose=self._verbosity)(
@@ -157,10 +157,11 @@ class ParallelCoordinator(Coordinator):
         y = np.concatenate([y for _, y in allData])
         self.logMsg("Label concatenated : "+str(len(y)), 47)  # TODO remove
         X = np.vstack(X for X, _ in allData)
-        self.logMsg("Features concatenated : "+str(X.shape), 47) # TODO remove
+        self.logMsg("Features concatenated : "+str(X.shape), 47)  # TODO remove
+        self.endTask()
 
         return X, y
-        
+
 if __name__ == "__main__":
     test1 = [("A",1), ("B",2), ("C",3), ("D",4)]
     test2 = [("A",1),("B",2),("C",3),("D",4),("E",5),("F",6),("G",7),("H",8)]

@@ -90,6 +90,7 @@ class Logger:
         """
         if not msg.endswith(os.linesep):
             msg += os.linesep
+        return msg
 
 
 class StandardLogger(Logger):
@@ -483,7 +484,7 @@ class Progressable(Logger):
         Ends the current task
         """
         if self._task is not None:
-            self.updateTaskProgress(self._task.getNbSteps())
+            self.updateTaskProgress(sys.maxsize)
 
     def logMsg(self, msg, minVerb=1):
         """Overload"""
