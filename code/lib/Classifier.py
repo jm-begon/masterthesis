@@ -4,10 +4,13 @@
 """ """
 import numpy as np
 
+from Logger import Progressable
+
+
 __all__ = ["Classifier"]
 
 
-class Classifier:
+class Classifier(Progressable):
     """
     ==========
     Classifier
@@ -29,6 +32,7 @@ class Classifier:
         required)
             The learning algorithm which will classify the data
         """
+        Progressable.__init__(self, coordinator.getLogger())
         self._classifier = base_classifier
         self._coord = coordinator
         self._classifToUserLUT = []
@@ -95,13 +99,21 @@ class Classifier:
         self._buildLUT(y_user)
 
         #Extracting the features
+        self.logMsg("Extracting the features (model creation)...", 35)
+
         X, y_user = self._coord.process(image_buffer)
+
+        self.logMsg("...Feature extraction done (model creation)", 45)
 
         #Converting the labels
         y = self._convertLabel(y_user)
 
         #Delegating the classification
+        self.logMsg("Learning the model...", 35)
+
         self._classifier.fit(X, y)
+
+        self.logMsg("...Model learnt", 45)
 
         return self
 
@@ -139,14 +151,24 @@ class Classifier:
             each entry is the probability vector of the input of the same
             index as computed by the base classifier
         """
+        #Extracting the features
+        self.logMsg("Extracting the features (prediction)...", 35)
 
         X_pred, _ = self._coord.process(image_buffer)
 
+        self.logMsg("...Feature extraction done (prediction)", 45)
+
+        #Misc.
         nbFactor = len(X_pred)/len(image_buffer)
 
         y = np.zeros((len(image_buffer), len(self._userToClassifLUT)))
 
+        #Classifying the data
+        self.logMsg("Classifying (prediction)...", 35)
+
         _y = self._classifier.predict_proba(X_pred)
+
+        self.logMsg("...Classified (prediction)", 45)
 
         for i in xrange(len(image_buffer)):
                 y[i] = np.sum(_y[i * nbFactor:(i + 1) * nbFactor], axis=0) / nbFactor

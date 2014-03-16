@@ -16,6 +16,7 @@ from Aggregator import AverageAggregator
 from ConvolutionalExtractor import ConvolutionalExtractor
 from Coordinator import RandConvCoordinator, PixitCoordinator
 from TaskManager import ParallelCoordinator
+from Logger import StandardLogger, ProgressLogger
 
 
 __all__ = ["coordinatorRandConvFactory", "coordinatorPixitFactory"]
@@ -101,9 +102,16 @@ def coordinatorPixitFactory(
     #COORDINATOR
     coordinator = PixitCoordinator(multiSWExtractor, featureExtractor)
 
+    #LOGGER
+    autoFlush = verbosity >= 45
+    logger = ProgressLogger(StandardLogger(autoFlush=autoFlush,
+                                       verbosity=verbosity))
+    coordinator.setLogger(logger)
     if nbJobs == 1 and verbosity <= 0:
         return coordinator
-    return ParallelCoordinator(coordinator, nbJobs, verbosity, tempFolder)
+    paraCoord = ParallelCoordinator(coordinator, nbJobs, verbosity, tempFolder)
+    paraCoord.setLogger(logger)
+    return paraCoord
 
 
 def coordinatorRandConvFactory(
@@ -236,9 +244,18 @@ def coordinatorRandConvFactory(
 
     #COORDINATOR
     coordinator = RandConvCoordinator(convolutionalExtractor, featureExtractor)
+
+    #LOGGER
+    autoFlush = verbosity >= 45
+    logger = ProgressLogger(StandardLogger(autoFlush=autoFlush,
+                                       verbosity=verbosity))
+    coordinator.setLogger(logger)
+
     if nbJobs == 1 and verbosity <= 0:
         return coordinator
-    return ParallelCoordinator(coordinator, nbJobs, verbosity, tempFolder)
+    paraCoord = ParallelCoordinator(coordinator, nbJobs, verbosity, tempFolder)
+    paraCoord.setLogger(logger)
+    return paraCoord
 
 
 

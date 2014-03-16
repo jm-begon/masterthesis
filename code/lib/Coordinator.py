@@ -10,12 +10,13 @@ from abc import ABCMeta, abstractmethod
 
 import numpy as np
 
+from Logger import Progressable
 from NumpyToPILConvertor import NumpyPILConvertor
 
 __all__ = ["PixitCoordinator", "RandConvCoordinator"]
 
 
-class Coordinator:
+class Coordinator(Progressable):
     """
     ===========
     Coordinator
@@ -31,6 +32,9 @@ class Coordinator:
     """
 
     __metaclass__ = ABCMeta
+
+    def __init__(self):
+        Progressable.__init__(self)
 
     @abstractmethod
     def process(self, imageBuffer):
@@ -65,6 +69,15 @@ class Coordinator:
         """Delegate to :meth:`process`"""
         return self.process(imageBuffer)
 
+    def getLogger(self):
+        """
+        Return
+        ------
+        logger : :class:`Logger`
+            The internal logger (might be None)
+        """
+        return self._logger
+
 
 class PixitCoordinator(Coordinator):
     """
@@ -97,6 +110,7 @@ class PixitCoordinator(Coordinator):
             The component responsible for extracting the features from
             each subwindow
         """
+        Coordinator.__init__(self)
         self._multiSWExtractor = multiSWExtractor
         self._featureExtractor = featureExtractor
 
@@ -105,6 +119,11 @@ class PixitCoordinator(Coordinator):
         ls = []
         y = []
         convertor = NumpyPILConvertor()
+        
+        #Logging
+        counter = 0
+        self.setTask(len(imageBuffer),
+                     "PixitCoordinator loop for each image")
         for image, label in imageBuffer:
             image = convertor.numpyToPIL(image)
             imgLs = self._multiSWExtractor.extract(image)
@@ -112,6 +131,9 @@ class PixitCoordinator(Coordinator):
                 ls.append(
                     self._featureExtractor.extract(convertor.pILToNumpy(img)))
             y = y + [label] * len(imgLs)
+            #Logging progress
+            self.updateTaskProgress(i)
+            counter += 1
         X = np.vstack((ls))
 
         return X, y
@@ -151,6 +173,7 @@ class RandConvCoordinator(Coordinator):
         The :class:`FeatureExtractor` instance must be adequate wrt the image
         type
         """
+        Coordinator.__init__(self)
         self._convolExtractor = convolutionalExtractor
         self._featureExtractor = featureExtractor
 
@@ -158,6 +181,12 @@ class RandConvCoordinator(Coordinator):
         """Overload"""
         ls = []
         y = []
+
+        #Logging
+        counter = 0
+        self.setTask(len(imageBuffer),
+                     "RandConvCoordinator loop for each image")
+
         for image, label in imageBuffer:
             #Get the subwindows x filters
             allSubWindows = self._convolExtractor.extract(image)
@@ -174,6 +203,10 @@ class RandConvCoordinator(Coordinator):
 
             #Extending the labels for each subwindow
             y = y + [label]*len(allSubWindows)
+
+            #Logging progress
+            self.updateTaskProgress(counter)
+            counter += 1
         #Combining the information for all the images
         X = np.vstack((ls))
 

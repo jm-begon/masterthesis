@@ -130,6 +130,7 @@ class ParallelCoordinator(Coordinator):
             The temporary folder used for memmap. If none, some default folder
             will be use (see the :lib:`joblib` library)
         """
+        Coordinator.__init__(self)
         self._coordinator = coordinator
         self._nbParal = nbParal
         self._verbosity = verbosity
@@ -142,15 +143,21 @@ class ParallelCoordinator(Coordinator):
         taskManager = TaskManager()
         nbJobs, subImageBuffer = taskManager.partition(self._nbParal,
                                                        imageBuffer)
+        #Logging
+        self.logMsg("Starting Parallelization", 35)
 
+        #Parallelization
         allData = Parallel(n_jobs=nbJobs, verbose=self._verbosity)(
             delayed(self._coordinator.process)(
                 subImageBuffer[i])
             for i in xrange(nbJobs))
 
         # Reduce
-        X = np.vstack(X for X, _ in allData)
+        self.logMsg("Concatenating the data...", 35)
         y = np.concatenate([y for _, y in allData])
+        self.logMsg("Label concatenated : "+str(len(y)), 47)  # TODO remove
+        X = np.vstack(X for X, _ in allData)
+        self.logMsg("Features concatenated : "+str(X.shape), 47) # TODO remove
 
         return X, y
         

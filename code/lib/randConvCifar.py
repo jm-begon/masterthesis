@@ -4,6 +4,7 @@
 """
 A script to run the random and convolution classifcation
 """
+import sys
 from time import time
 
 from sklearn.ensemble import ExtraTreesClassifier
@@ -25,7 +26,7 @@ if __name__ == "__main__":
     filter_max_val = 1
     filterMinSize = 3
     filterMaxSize = 32
-    filterNormalisation = FilterGenerator.NORMALISATION_NONE  # TODO
+    filterNormalisation = FilterGenerator.NORMALISATION_MEANVAR
 
     #Aggregation
     aggregatorNeighborhoodWidth = 2
@@ -59,11 +60,13 @@ if __name__ == "__main__":
 
     #=====DATA=====#
     maxLearningSize = 50000
-    learningUse = 100
+    maxTestingSize = 10000
+
+    learningUse = 50
     learningSetDir = "learn/"
     learningIndexFile = "0index"
-    maxTestingSize = 10000
-    testingUse = 100
+
+    testingUse = 50
     testingSetDir = "test/"
     testingIndexFile = "0index"
 
@@ -106,17 +109,20 @@ if __name__ == "__main__":
     #--Data--
     loader = CifarFromNumpies(learningSetDir, learningIndexFile)
     learningSet = FileImageBuffer(loader.getFiles(), NumpyImageLoader())
-    learningSet[0:learningUse]
+    learningSet = learningSet[0:learningUse]
 
     loader = CifarFromNumpies(testingSetDir, testingIndexFile)
     testingSet = FileImageBuffer(loader.getFiles(), NumpyImageLoader())
-    testingSet[0:testingUse]
+    testingSet = testingSet[0:testingUse]
 
     #=====COMPUTATION=====#
     #--Learning--#
+    print "Starting learning"
     fitStart = time()
     classifier.fit(learningSet)
     fitEnd = time()
+    print "Learning done", (fitEnd-fitStart), "seconds"
+    sys.stdout.flush()
 
     #--Testing--#
     y_truth = testingSet.getLabels()
