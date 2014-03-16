@@ -44,6 +44,7 @@ if __name__ == "__main__":
     includeOriginalImage = True
     nbJobs = 1
     verbosity = 10
+    tempFolder = "temp/"
 
     #-----Extratree param
     nbTrees = 10
@@ -85,7 +86,8 @@ if __name__ == "__main__":
         subwindowInterpolation=subwindowInterpolation,
         includeOriginalImage=includeOriginalImage,
         nbJobs=nbJobs,
-        verbosity=verbosity)
+        verbosity=verbosity,
+        tempFolder=tempFolder)
 
     #--Extra-tree--
     baseClassif = ExtraTreesClassifier(nbTrees,

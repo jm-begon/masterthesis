@@ -111,7 +111,7 @@ class ParallelCoordinator(Coordinator):
     #Counts the number of instances already created
     instanceCounter = 0
 
-    def __init__(self, coordinator, nbParal=-1, verbosity=0):
+    def __init__(self, coordinator, nbParal=-1, verbosity=0, tempFolder=None):
         """
         Construct a :class:`ParallelCoordinator`
 
@@ -126,6 +126,9 @@ class ParallelCoordinator(Coordinator):
         verbosity : int >=0 (default : 0)
             The verbosity level. The higher, the more information message.
             Information message are printed on the stderr
+        tempFolder : string (directory path) (default : None)
+            The temporary folder used for memmap. If none, some default folder
+            will be use (see the :lib:`joblib` library)
         """
         self._coordinator = coordinator
         self._nbParal = nbParal

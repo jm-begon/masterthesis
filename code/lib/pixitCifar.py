@@ -25,6 +25,7 @@ if __name__ == "__main__":
     fixedSize = False
     nbJobs = -2
     verbosity = 10
+    tempFolder = "temp/"
 
     #Extratree param
     nbTrees = 10
@@ -56,7 +57,8 @@ if __name__ == "__main__":
                                          subwindowTargetHeight,
                                          fixedSize=fixedSize,
                                          nbJobs=nbJobs,
-                                         verbosity=verbosity)
+                                         verbosity=verbosity,
+                                         tempFolder=tempFolder)
 
     #--Extra-tree--
     baseClassif = ExtraTreesClassifier(nbTrees,

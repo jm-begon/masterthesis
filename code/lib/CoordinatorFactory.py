@@ -27,7 +27,7 @@ def coordinatorPixitFactory(
         subwindowTargetWidth=16, subwindowTargetHeight=16,
         fixedSize=False,
         subwindowInterpolation=SubWindowExtractor.INTERPOLATION_BILINEAR,
-        nbJobs=-1, verbosity=10):
+        nbJobs=-1, verbosity=10, tempFolder=None):
     """
     Factory method to create :class:`PixitCoordinator`
 
@@ -60,6 +60,9 @@ def coordinatorPixitFactory(
         If -1, the maximum number is selected. See also :mod:`Joblib`.
     verbosity : int >= 0 (default : 10)
         The verbosity level
+    tempFolder : string (directory path) (default : None)
+            The temporary folder used for memmap. If none, some default folder
+            will be use (see the :class:`ParallelCoordinator`)
 
     Return
     ------
@@ -100,7 +103,7 @@ def coordinatorPixitFactory(
 
     if nbJobs == 1 and verbosity <= 0:
         return coordinator
-    return ParallelCoordinator(coordinator, nbJobs, verbosity)
+    return ParallelCoordinator(coordinator, nbJobs, verbosity, tempFolder)
 
 
 def coordinatorRandConvFactory(
@@ -114,7 +117,7 @@ def coordinatorRandConvFactory(
         subwindowTargetWidth=16, subwindowTargetHeight=16,
         subwindowInterpolation=SubWindowExtractor.INTERPOLATION_BILINEAR,
         includeOriginalImage=False,
-        nbJobs=-1, verbosity=10):
+        nbJobs=-1, verbosity=10, tempFolder=None):
     """
     Factory method to create :class:`RandConvCoordinator` tuned for RGB images
 
@@ -166,6 +169,9 @@ def coordinatorRandConvFactory(
         If -1, the maximum number is selected. See also :mod:`Joblib`.
     verbosity : int >= 0 (default : 10)
         The verbosity level
+    tempFolder : string (directory path) (default : None)
+            The temporary folder used for memmap. If none, some default folder
+            will be use (see the :class:`ParallelCoordinator`)
 
     Return
     ------
@@ -232,7 +238,7 @@ def coordinatorRandConvFactory(
     coordinator = RandConvCoordinator(convolutionalExtractor, featureExtractor)
     if nbJobs == 1 and verbosity <= 0:
         return coordinator
-    return ParallelCoordinator(coordinator, nbJobs, verbosity)
+    return ParallelCoordinator(coordinator, nbJobs, verbosity, tempFolder)
 
 
 
