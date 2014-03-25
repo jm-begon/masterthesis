@@ -130,6 +130,29 @@ class ConvolutionalExtractor:
 
         return allSubWindows
 
+    def getFilters(self):
+        """
+        Return the filters used to process the image
+
+        Return
+        ------
+        filters : iterable of numpy arrays
+            The filters used to process the image, with the exclusion
+            of the identity filter if the raw image was included
+        """
+        return self._finiteFilter
+
+    def isImageIncluded(self):
+        """
+        Whether the raw image was included
+
+        Return
+        ------
+        isIncluded : boolean
+            True if the raw image was included
+        """
+        return self._include_image
+
 if __name__ == "__main__":
     test = True
     if test:
@@ -142,7 +165,7 @@ if __name__ == "__main__":
 
         imgPil = Image.open(imgpath)
         img = np.array(imgPil)
-        
+
 
         #CONVOLUTIONAL EXTRACTOR
         #Filter generator
@@ -150,21 +173,21 @@ if __name__ == "__main__":
         filterSizeGenerator = OddUniformGenerator(3,10)
         baseFilterGenerator = FilterGenerator(filterValGenerator, filterSizeGenerator)
         filterGenerator = Finite3SameFilter(baseFilterGenerator, 6)
-        
+
         #Convolver
         convolver = RGBConvolver()
-        
+
         #SubWindowExtractor
         subwindowTargetWidth = 200
         subwindowTargetHeight = 200
         swNumGenerator = NumberGenerator()
         swExtractor = SubWindowExtractor(0.5, 1., subwindowTargetWidth, subwindowTargetHeight, SubWindowExtractor.INTERPOLATION_BILINEAR, swNumGenerator)
         multiSWExtractor = MultiSWExtractor(swExtractor,4)
-        
+
         #Aggregator
         aggregator = AverageAggregator(10, 10, subwindowTargetWidth , subwindowTargetHeight)
-        
-        convolutionalExtractor = ConvolutionalExtractor(filterGenerator, convolver, multiSWExtractor, aggregator)    
-        
+
+        convolutionalExtractor = ConvolutionalExtractor(filterGenerator, convolver, multiSWExtractor, aggregator)
+
         res = convolutionalExtractor.extract(img)
-        
+

@@ -20,6 +20,11 @@ class Logger:
     Logger
     ======
     A abstract base class for the logging facility
+
+    Attributes
+    ----------
+    verbosity : int [0,50] (default : 50)
+        the degree of verbosity (the more, the more verbose)
     """
     __metaclass__ = ABCMeta
 
@@ -91,6 +96,14 @@ class Logger:
         if not msg.endswith(os.linesep):
             msg += os.linesep
         return msg
+
+
+class VoidLogger(Logger):
+    def __init__(self, verbosity=10):
+        Logger.__init__(self, verbosity)
+
+    def logMsg(self, msg, minVerb=1):
+        pass
 
 
 class StandardLogger(Logger):
@@ -423,11 +436,14 @@ class Progressable(Logger):
         Parameters
         ----------
         progressLogger : :class:`ProgressLogger` (default : None)
-            the object to report to. Can be None (nothing is reported)
+            the object to report to. Can be None (nothing is reported).
+            If None, a :class:`StandardLogger` is provided
         verbosity : int [0,50] (default : 10)
             the degree of verbosity (the higher, the more verbose)
         """
         Logger.__init__(self, verbosity)
+        if progressLogger is None:
+            progressLogger = StandardLogger(verbosity)
         self.setLogger(progressLogger)
         self._task = None
 

@@ -5,6 +5,7 @@
 A script to run the random and convolution classifcation
 """
 import sys
+import os
 from time import time
 
 from sklearn.ensemble import ExtraTreesClassifier
@@ -16,17 +17,18 @@ from FilterGenerator import FilterGenerator
 from CifarLoader import CifarFromNumpies
 from ImageBuffer import FileImageBuffer, NumpyImageLoader
 
-if __name__ == "__main__":
+
+def run():
 
     #======HYPER PARAMETERS======#
     #----RandConv param
     #Filtering
     nb_filters = 100
-    filter_min_val = -1
-    filter_max_val = 1
+    filter_min_val = -5
+    filter_max_val = 5
     filterMinSize = 3
-    filterMaxSize = 32
-    filterNormalisation = FilterGenerator.NORMALISATION_MEANVAR
+    filterMaxSize = 6
+    filterNormalisation = FilterGenerator.NORMALISATION_NONE
 
     #Aggregation
     aggregatorNeighborhoodWidth = 2
@@ -42,35 +44,36 @@ if __name__ == "__main__":
     subwindowInterpolation = SubWindowExtractor.INTERPOLATION_BILINEAR
 
     #Misc.
-    includeOriginalImage = False
+    includeOriginalImage = True
     nbJobs = -1
-    verbosity = 50
+    verbosity = 7
     tempFolder = "temp/"
 
     #-----Extratree param
-    nbTrees = 10
+    nbTrees = 30
     maxFeatures = "auto"
     maxDepth = None
     minSamplesSplit = 2
     minSamplesLeaf = 1
     bootstrap = False
-    nbJobsEstimator = 10
+    nbJobsEstimator = -1
     randomState = None
-    verbose = 50
+    verbose = 8
 
     #=====DATA=====#
-    maxLearningSize = 50000
-    maxTestingSize = 10000
+#    maxLearningSize = 50000
+#    maxTestingSize = 10000
 
-    learningUse = 50
+    learningUse = 500
     learningSetDir = "learn/"
     learningIndexFile = "0index"
 
-    testingUse = 50
+    testingUse = 500
     testingSetDir = "test/"
     testingIndexFile = "0index"
 
     #======INSTANTIATING========#
+    os.environ["JOBLIB_TEMP_FOLDER"] = "/home/jmbegon/jmbegon/code/work/tmp/"
     #--Pixit--
     randConvCoord = coordinatorRandConvFactory(
         nbFilters=nb_filters,
@@ -131,9 +134,8 @@ if __name__ == "__main__":
     predEnd = time()
     accuracy = classifier.accuracy(y_pred, y_truth)
 
-    print ">>>>>First 50<<<<<<"
-    for i in xrange(min((50, len(y_pred)))):
-        print y_pred[i], y_truth[i]
+    #====ANALYSIS=====#
+    importance, order = randConvCoord.importancePerFeatureGrp(baseClassif)
 
     print "========================================="
     print "-----------Filtering--------------"
@@ -172,3 +174,11 @@ if __name__ == "__main__":
     print "Fit time", (fitEnd-fitStart), "seconds"
     print "Classifcation time", (predEnd-predStart), "seconds"
     print "Accuracy", accuracy
+
+    return accuracy, importance, order
+
+if __name__ == "__main__":
+    acc, importance, order = run()
+
+    print importance
+    print order

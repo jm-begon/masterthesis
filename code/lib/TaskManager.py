@@ -4,21 +4,30 @@
 """
 Several tools for parallel computation
 """
+from abc import ABCMeta, abstractmethod
+
 import copy_reg
 import types
 
-import numpy as np
 
 from sklearn.externals.joblib import Parallel, delayed, cpu_count
-from Coordinator import Coordinator
+from Logger import Progressable
 
-__all__ = ["TaskManager", "ParallelCoordinator"]
+__all__ = ["TaskSplitter", "TaskExecutor", "SerialExecutor",
+           "ParallelExecutor"]
 
 
-class TaskManager:
+def reduceMethod(m):
+    """Adds the capacity to pickle method of objects"""
+    return (getattr, (m.__self__, m.__func__.__name__))
+
+copy_reg.pickle(types.MethodType, reduceMethod)
+
+
+class TaskSplitter:
     """
     ===========
-    TaskManager
+    TaskSplitter
     ===========
     A toolkit for preprocessing parallel computation
     """
@@ -96,76 +105,185 @@ class TaskManager:
         return nbTasks, dataParts
 
 
-def reduceMethod(m):
-    """Adds the capacity to pickle method of objects"""
-    return (getattr, (m.__self__, m.__func__.__name__))
-
-
-class ParallelCoordinator(Coordinator):
+class TaskExecutor(Progressable):
     """
-    ===================
-    ParallelCoordinator
-    ===================
-    A coordinator (see :class:`Coordinator`) for parallel computing
+    ===========
+    TaskExecutor
+    ===========
+    A class responsible for carrying out submitted tasks
     """
-    #Counts the number of instances already created
-    instanceCounter = 0
+    __metaclass__ = ABCMeta
 
-    def __init__(self, coordinator, nbParal=-1, verbosity=0, tempFolder=None):
+    def __init__(self, logger=None, verbosity=10):
         """
-        Construct a :class:`ParallelCoordinator`
+        Creates a :class:`TaskExecutor`
+        """
+        Progressable.__init__(self, logger, verbosity)
+
+    @abstractmethod
+    def execute(self, descr, function, data, *args, **kwargs):
+        """
+        Get the result of the task directly
 
         Parameters
         ----------
-        coordinator : :class:`Coordinator`
-            The coordinator which will execute the work in its private
-            child process
-        nbParal : int {-1, > 0} (default : -1)
-            The parallel factor. If -1, or > #cpu, the maximum factor is used
-            (#cpu)
-        verbosity : int >=0 (default : 0)
-            The verbosity level. The higher, the more information message.
-            Information message are printed on the stderr
-        tempFolder : string (directory path) (default : None)
-            The temporary folder used for memmap. If none, some default folder
-            will be use (see the :lib:`joblib` library)
+        desc : str
+            A string describing the task
+        function : callable
+            The function to process the task. The function must be able to
+            work on any subset of the data
+        data : an iterable of piece of data
+            The data to process
+        args : iterable
+            Parameters to pass to the function
+        kwargs: dictionnary
+            Keyword parameters to pass to the function
+
+        Return
+        ------
+        ls : iterable of results
+            each individual result is the execution of the function on a given
+            subset of the data. The caller must aggregate the result accordinly
         """
-        Coordinator.__init__(self)
-        self._coordinator = coordinator
+        pass
+
+    def __call__(self, descr, function, data, *args, **kwargs):
+        """Delegate to :meth:`execute`"""
+        return self.execute(descr, function, data, args, kwargs)
+
+
+class SerialExecutor(TaskExecutor):
+    """
+    ==============
+    SerialExecutor
+    ==============
+    :class:`SerialExecutor` simply store the task to execute later
+    """
+
+    def __init__(self, logger=None, verbosity=10):
+        TaskExecutor.__init__(self, logger, verbosity)
+
+    def execute(self, desc, function, data, *args, **kwargs):
+        self.setTask(1, desc)
+        if len(args) == 0:
+            if len(kwargs) == 0:
+                ls = [function(data)]
+            else:
+                ls = [function(data, *args)]
+        elif len(kwargs) == 0:
+            ls = [function(data, **kwargs)]
+        else:
+            ls = [function(data, *args, **kwargs)]
+        self.endTask()
+        return ls
+
+
+class ParallelExecutor(TaskExecutor):
+    """
+    ====================
+    ParallelExecutor
+    ====================
+    :class:`ParallelExecutor` splits the data for multiprocessing
+    """
+
+    def __init__(self, nbParal=-1, logger=None, verbosity=0, tempFolder=None):
+        TaskExecutor.__init__(self, logger, verbosity)
         self._nbParal = nbParal
-        self._verbosity = verbosity
+        self._tmpFolder = tempFolder
 
-        if ParallelCoordinator.instanceCounter == 0:
-            copy_reg.pickle(types.MethodType, reduceMethod)
-        ParallelCoordinator.instanceCounter += 1
+    def execute(self, desc, function, data, *args, **kwargs):
+        #Splitting task
+        taskSplitter = TaskSplitter()
+        nbJobs, splittedData = taskSplitter.partition(self._nbParal, data)
 
-    def process(self, imageBuffer):
-        taskManager = TaskManager()
-        nbJobs, subImageBuffer = taskManager.partition(self._nbParal,
-                                                       imageBuffer)
         #Logging
-        self.setTask(1, "Starting parallelization")
+        self.setTask(1, ("Starting parallelization : "+desc))
 
         #Parallelization
-        allData = Parallel(n_jobs=nbJobs, verbose=self._verbosity)(
-            delayed(self._coordinator.process)(
-                subImageBuffer[i])
-            for i in xrange(nbJobs))
+        parallelizer = Parallel(n_jobs=nbJobs, temp_folder=self._tmpFolder,
+                                verbose=self.verbosity,)
 
-        # Reduce
-        self.logMsg("Concatenating the data...", 35)
-        y = np.concatenate([y for _, y in allData])
-        self.logMsg("Label concatenated : "+str(len(y)), 47)  # TODO remove
-        X = np.vstack(X for X, _ in allData)
-        self.logMsg("Features concatenated : "+str(X.shape), 47)  # TODO remove
+        if len(args) == 0:
+            if len(kwargs) == 0:
+                allData = parallelizer(delayed(function)(
+                    splittedData[i]) for i in xrange(nbJobs))
+            else:
+                allData = parallelizer(delayed(function)(
+                    splittedData[i], *args) for i in xrange(nbJobs))
+        elif len(kwargs) == 0:
+            allData = parallelizer(delayed(function)(
+                splittedData[i], **kwargs) for i in xrange(nbJobs))
+        else:
+            allData = parallelizer(delayed(function)(
+                splittedData[i], *args, **kwargs) for i in xrange(nbJobs))
         self.endTask()
 
-        return X, y
+        return allData
+
+
+#class ParallelCoordinator(Coordinator):
+#    """
+#    ===================
+#    ParallelCoordinator
+#    ===================
+#    A coordinator (see :class:`Coordinator`) for parallel computing
+#    """
+#    #Counts the number of instances already created
+#    instanceCounter = 0
+#
+#    def __init__(self, coordinator, nbParal=-1, verbosity=0, tempFolder=None):
+#        """
+#        Construct a :class:`ParallelCoordinator`
+#
+#        Parameters
+#        ----------
+#        coordinator : :class:`Coordinator`
+#            The coordinator which will execute the work in its private
+#            child process
+#        nbParal : int {-1, > 0} (default : -1)
+#            The parallel factor. If -1, or > #cpu, the maximum factor is used
+#            (#cpu)
+#        verbosity : int >=0 (default : 0)
+#            The verbosity level. The higher, the more information message.
+#            Information message are printed on the stderr
+#        tempFolder : string (directory path) (default : None)
+#            The temporary folder used for memmap. If none, some default folder
+#            will be use (see the :lib:`joblib` library)
+#        """
+#        Coordinator.__init__(self)
+#        self._coordinator = coordinator
+#        self._nbParal = nbParal
+#        self._verbosity = verbosity
+#
+#        if ParallelCoordinator.instanceCounter == 0:
+#            copy_reg.pickle(types.MethodType, reduceMethod)
+#        ParallelCoordinator.instanceCounter += 1
+#
+#    def process(self, imageBuffer):
+#        taskSplitter = TaskSplitter()
+#        nbJobs, subImageBuffer = taskSplitter.partition(self._nbParal,
+#                                                       imageBuffer)
+#        #Logging
+#        self.setTask(1, "Starting parallelization")
+#
+#        #Parallelization
+#        allData = Parallel(n_jobs=nbJobs, verbose=self._verbosity)(
+#            delayed(self._coordinator.process)(
+#                subImageBuffer[i])
+#            for i in xrange(nbJobs))
+#
+#        # Reduce
+#        self.logMsg("Concatenating the data...", 35)
+#        y = np.concatenate([y for _, y in allData])
+#        X = np.vstack(X for X, _ in allData)
+#        self.endTask()
+#
+#        return X, y
 
 if __name__ == "__main__":
     test1 = [("A",1), ("B",2), ("C",3), ("D",4)]
     test2 = [("A",1),("B",2),("C",3),("D",4),("E",5),("F",6),("G",7),("H",8)]
     test3 = [("A",1),("B",2),("C",3),("D",4),("E",5),("F",6),("G",7),("H",8),("I",9),("J",10),("K",11),("L",12)]
-    
-    taskMan = TaskManager()
+
+    taskMan = TaskSplitter()
 

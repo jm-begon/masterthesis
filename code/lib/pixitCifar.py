@@ -23,7 +23,7 @@ if __name__ == "__main__":
     subwindowTargetWidth = 16
     subwindowTargetHeight = 16
     fixedSize = False
-    nbJobs = -2
+    nbJobs = -1
     verbosity = 10
     tempFolder = "temp/"
 
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     minSamplesSplit = 2
     minSamplesLeaf = 1
     bootstrap = False
-    nbJobsEstimator = -1
+    nbJobsEstimator = 1
     randomState = None
     verbose = 10
 
@@ -127,5 +127,4 @@ if __name__ == "__main__":
     print "Fit time", (predEnd-predStart), "seconds"
     print "Accuracy", accuracy
 
-#    y_prob = classifier.predict_proba(learningSet)
-#    print y_prob
+

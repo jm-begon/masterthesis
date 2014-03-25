@@ -15,7 +15,6 @@ from FeatureExtractor import ImageLinearizationExtractor
 from Aggregator import AverageAggregator
 from ConvolutionalExtractor import ConvolutionalExtractor
 from Coordinator import RandConvCoordinator, PixitCoordinator
-from TaskManager import ParallelCoordinator
 from Logger import StandardLogger, ProgressLogger
 
 
@@ -99,19 +98,18 @@ def coordinatorPixitFactory(
     #FEATURE EXTRACTOR
     featureExtractor = ImageLinearizationExtractor()
 
-    #COORDINATOR
-    coordinator = PixitCoordinator(multiSWExtractor, featureExtractor)
-
     #LOGGER
     autoFlush = verbosity >= 45
     logger = ProgressLogger(StandardLogger(autoFlush=autoFlush,
-                                       verbosity=verbosity))
-    coordinator.setLogger(logger)
-    if nbJobs == 1 and verbosity <= 0:
-        return coordinator
-    paraCoord = ParallelCoordinator(coordinator, nbJobs, verbosity, tempFolder)
-    paraCoord.setLogger(logger)
-    return paraCoord
+                                           verbosity=verbosity))
+
+    #COORDINATOR
+    coordinator = PixitCoordinator(multiSWExtractor, featureExtractor, logger,
+                                   verbosity)
+
+    if nbJobs != 1:
+        coordinator.parallelize(nbJobs, tempFolder)
+    return coordinator
 
 
 def coordinatorRandConvFactory(
@@ -242,20 +240,17 @@ def coordinatorRandConvFactory(
     #FEATURE EXTRACTOR
     featureExtractor = ImageLinearizationExtractor()
 
-    #COORDINATOR
-    coordinator = RandConvCoordinator(convolutionalExtractor, featureExtractor)
-
     #LOGGER
     autoFlush = verbosity >= 45
     logger = ProgressLogger(StandardLogger(autoFlush=autoFlush,
-                                       verbosity=verbosity))
-    coordinator.setLogger(logger)
+                                           verbosity=verbosity))
+    #COORDINATOR
+    coordinator = RandConvCoordinator(convolutionalExtractor, featureExtractor,
+                                      logger, verbosity)
 
-    if nbJobs == 1 and verbosity <= 0:
-        return coordinator
-    paraCoord = ParallelCoordinator(coordinator, nbJobs, verbosity, tempFolder)
-    paraCoord.setLogger(logger)
-    return paraCoord
+    if nbJobs != 1:
+        coordinator.parallelize(nbJobs, tempFolder)
+    return coordinator
 
 
 

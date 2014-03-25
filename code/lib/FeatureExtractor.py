@@ -4,21 +4,74 @@
 """
 A set of feature extractors
 """
+from abc import ABCMeta, abstractmethod
 
 import numpy as np
 
-__all__ = ["Extractor", "IdentityExtractor", "Combinator",
+__all__ = ["Transformer", "Extractor", "IdentityExtractor", "Combinator",
            "StatelessExtractor", "ImageLinearizationExtractor"]
 
 
-class Extractor:
+class Transformer:
+    """
+    =========
+    Transformer
+    =========
+    :class:`Transformer` is a class responsible for processing some data
+    A :class:`Transformer` must specify what it takes as input and how it
+    transform it as output
+    """
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def transformWholeData(self, wholeData):
+        """
+        Process the whole data
+
+        Parameters
+        ----------
+        wholeData : object(s)
+            The whole data
+
+        Return
+        ------
+        transformedData : object(s)
+            The corresponding objects
+        """
+        pass
+
+    @abstractmethod
+    def TransformPieceOfData(self, pieceOfData):
+        """
+        Process a piece of data
+
+        Parameters
+        ----------
+        pieceOfData : object
+            The piece of data
+
+        Return
+        ------
+        transformedData : object
+            The corresponding data
+        """
+        pass
+
+
+class Extractor(Transformer):
     """
      =========
      Extractor
      =========
-     A extractor is responsible for extracting features from the data.
-     A given extractor must specify which data it takes as input and how
-     it computes the output
+     An :class:`Extractor `is a :class:`Transformer` such that
+     - The input verifies :
+         wholeData : An iterable of pieceOfData
+     - The output verifies :
+         - for a piece of data :
+             a 1D numpy array for each piece of data (the feature vector)
+         - for the whole data :
+             a 2D numpy array. Each row of the 2D array is the feature vector
+             of the corresponding piece of data
 
      This base class transform a list of feature vectors into a 2D numpy
      matrix
@@ -41,6 +94,12 @@ class Extractor:
         obj itself
         """
         return obj
+
+    def TransformPieceOfData(self, pieceOfData):
+        return self.extract(pieceOfData)
+
+    def transformWholeData(self, wholeData):
+        return self.transform(wholeData)
 
     def transform(self, X):
         """
@@ -138,7 +197,20 @@ class StatelessExtractor(Extractor):
         return self._f(row)
 
 
-class ImageLinearizationExtractor(Extractor):
+class NumpyTransformer(Extractor):
+    """
+    ================
+    NumpyTransformer
+    ================
+    An :class:`ImageTransformer` instance takes as input :
+    - wholeData : iterable of pieceOfData
+    - pieceOfData : a 2D or 3D numpy array
+    """
+    __metaclass__ = ABCMeta
+    pass
+
+
+class ImageLinearizationExtractor(NumpyTransformer, Extractor):
     """
     ===========================
     ImageLinearizationExtractor
@@ -201,6 +273,7 @@ class ImageLinearizationExtractor(Extractor):
             return np.hstack(lin)
 
 
+
 if __name__ == "__main__":
     test=True
     if test:
@@ -211,30 +284,29 @@ if __name__ == "__main__":
             from PIL import Image
         img = np.array(Image.open(imgpath))
         red = img[:,:,0]
-                
+
         redLin = ImageLinearizationExtractor().extract(red)
-        
-        imgLin = ImageLinearizationExtractor().extract(img)             
-                
-        r = np.array([0]*1024, dtype=np.uint8).reshape(32,32)      
+
+        imgLin = ImageLinearizationExtractor().extract(img)
+
+        r = np.array([0]*1024, dtype=np.uint8).reshape(32,32)
         g = np.array([127]*1024, dtype=np.uint8).reshape(32,32)
         b = np.array([255]*1024, dtype=np.uint8).reshape(32,32)
-        
+
         img2 = np.dstack((r,g,b))
-        
-        img2Lin = ImageLinearizationExtractor().extract(img2)    
-        
-        r2 = np.array([1]*1024, dtype=np.uint8).reshape(32,32)      
+
+        img2Lin = ImageLinearizationExtractor().extract(img2)
+
+        r2 = np.array([1]*1024, dtype=np.uint8).reshape(32,32)
         g2 = np.array([128]*1024, dtype=np.uint8).reshape(32,32)
         b2 = np.array([250]*1024, dtype=np.uint8).reshape(32,32)
-        
+
         img3 = np.dstack((r2,g2,b2))
 
         ls = [img2, img3]
-        
+
         imgLs = ImageLinearizationExtractor()(ls)
-        
-          
-          
-                
-                
+
+
+
+
