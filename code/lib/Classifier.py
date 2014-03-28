@@ -4,6 +4,8 @@
 """ """
 import numpy as np
 
+from sklearn.metrics import confusion_matrix
+
 from Logger import Progressable
 
 
@@ -82,7 +84,7 @@ class Classifier(Progressable):
 
     def fit(self, image_buffer):
         """
-        Fits the data contained is the :class:`ImageBuffer` instance
+        Fits the data contained in the :class:`ImageBuffer` instance
 
         Parameters
         -----------
@@ -101,7 +103,7 @@ class Classifier(Progressable):
         #Extracting the features
         self.setTask(1, "Extracting the features (model creation)")
 
-        X, y_user = self._coord.process(image_buffer)
+        X, y_user = self._coord.process(image_buffer, learningPhase=True)
 
         self.endTask()
 
@@ -119,7 +121,7 @@ class Classifier(Progressable):
 
     def predict(self, image_buffer):
         """
-        Classify the data contained is the :class:`ImageBuffer` instance
+        Classify the data contained in the :class:`ImageBuffer` instance
 
         Parameters
         -----------
@@ -154,7 +156,7 @@ class Classifier(Progressable):
         #Extracting the features
         self.setTask(1, "Extracting the features (prediction)")
 
-        X_pred, _ = self._coord.process(image_buffer)
+        X_pred, _ = self._coord.process(image_buffer, learningPhase=False)
 
         self.endTask()
 
@@ -177,7 +179,7 @@ class Classifier(Progressable):
 
     def accuracy(self, y_pred, y_truth):
         """
-        Computes the frequency of correspondance between the two vectors
+        Compute the frequency of correspondance between the two vectors
 
         Parameters
         -----------
@@ -192,3 +194,21 @@ class Classifier(Progressable):
             the accuracy
         """
         return sum(map((lambda x, y: x == y), y_pred, y_truth))/float(len(y_truth))
+
+    def confusionMatrix(self, y_pred, y_truth):
+        """
+        Compute the confusion matrix
+
+        Parameters
+        -----------
+        y_pred : list of int
+            The prediction by the model
+        y_truth : list of int
+            The ground truth
+
+        Return
+        -------
+        mat : 2D numpy array
+            The confusion matrix
+        """
+        return confusion_matrix(y_truth, y_pred)

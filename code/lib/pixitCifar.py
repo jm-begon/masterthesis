@@ -23,7 +23,7 @@ if __name__ == "__main__":
     subwindowTargetWidth = 16
     subwindowTargetHeight = 16
     fixedSize = False
-    nbJobs = -1
+    nbJobs = 1
     verbosity = 10
     tempFolder = "temp/"
 
@@ -40,11 +40,11 @@ if __name__ == "__main__":
 
     #=====DATA=====#
     maxLearningSize = 50000
-    learningUse = 100
+    learningUse = 500
     learningSetDir = "learn/"
     learningIndexFile = "0index"
     maxTestingSize = 10000
-    testingUse = 100
+    testingUse = 500
     testingSetDir = "test/"
     testingIndexFile = "0index"
 
@@ -96,10 +96,7 @@ if __name__ == "__main__":
     y_pred = classifier.predict(testingSet)
     predEnd = time()
     accuracy = classifier.accuracy(y_pred, y_truth)
-
-    print ">>>>>First 50<<<<<<"
-    for i in xrange(min((50, len(y_pred)))):
-        print y_pred[i], y_truth[i]
+    confMat = classifier.confusionMatrix(y_pred, y_truth)
 
     print "========================================="
     print "--------SW extractor----------"
@@ -126,5 +123,4 @@ if __name__ == "__main__":
     print "Fit time", (fitEnd-fitStart), "seconds"
     print "Fit time", (predEnd-predStart), "seconds"
     print "Accuracy", accuracy
-
-
+    print "Confusion matrix", confMat

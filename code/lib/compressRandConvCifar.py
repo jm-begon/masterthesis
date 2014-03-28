@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # Author : Jean-Michel Begon
-# Date : Mar 10 2014
+# Date : Mar 28 2014
 """
-A script to run the random and convolution classifcation
+A script to run the compressed random and convolution classifcation
 """
 import sys
 import os
@@ -10,7 +10,7 @@ from time import time
 
 from sklearn.ensemble import ExtraTreesClassifier
 
-from CoordinatorFactory import coordinatorRandConvFactory
+from CoordinatorFactory import coordinatorCompressRandConvFactory
 from Classifier import Classifier
 from SubWindowExtractor import SubWindowExtractor
 from FilterGenerator import FilterGenerator
@@ -45,6 +45,13 @@ def run():
 
     #Misc.
     includeOriginalImage = True
+
+    #Compressor
+    compressorType = "Sampling"
+    nbCompressedFeatures = 20
+    compressOriginalImage = True
+
+    #Parrallelization & Logger
     nbJobs = -1
     verbosity = 8
     tempFolder = "tmp/"
@@ -75,7 +82,7 @@ def run():
     #======INSTANTIATING========#
     os.environ["JOBLIB_TEMP_FOLDER"] = "/home/jmbegon/jmbegon/code/work/tmp/"
     #--Pixit--
-    randConvCoord = coordinatorRandConvFactory(
+    randConvCoord = coordinatorCompressRandConvFactory(
         nbFilters=nb_filters,
         filterMinVal=filter_min_val,
         filterMaxVal=filter_max_val,
@@ -91,6 +98,9 @@ def run():
         filterNormalisation=filterNormalisation,
         subwindowInterpolation=subwindowInterpolation,
         includeOriginalImage=includeOriginalImage,
+        compressorType=compressorType,
+        nbCompressedFeatures=nbCompressedFeatures,
+        compressOriginalImage=compressOriginalImage,
         nbJobs=nbJobs,
         verbosity=verbosity,
         tempFolder=tempFolder)

@@ -149,7 +149,7 @@ class TaskExecutor(Progressable):
 
     def __call__(self, descr, function, data, *args, **kwargs):
         """Delegate to :meth:`execute`"""
-        return self.execute(descr, function, data, args, kwargs)
+        return self.execute(descr, function, data, *args, **kwargs)
 
 
 class SerialExecutor(TaskExecutor):
@@ -169,9 +169,9 @@ class SerialExecutor(TaskExecutor):
             if len(kwargs) == 0:
                 ls = [function(data)]
             else:
-                ls = [function(data, *args)]
+                ls = [function(data, *kwargs)]
         elif len(kwargs) == 0:
-            ls = [function(data, **kwargs)]
+            ls = [function(data, *args)]
         else:
             ls = [function(data, *args, **kwargs)]
         self.endTask()
@@ -209,10 +209,10 @@ class ParallelExecutor(TaskExecutor):
                     splittedData[i]) for i in xrange(nbJobs))
             else:
                 allData = parallelizer(delayed(function)(
-                    splittedData[i], *args) for i in xrange(nbJobs))
+                    splittedData[i], **kwargs) for i in xrange(nbJobs))
         elif len(kwargs) == 0:
             allData = parallelizer(delayed(function)(
-                splittedData[i], **kwargs) for i in xrange(nbJobs))
+                splittedData[i], *args) for i in xrange(nbJobs))
         else:
             allData = parallelizer(delayed(function)(
                 splittedData[i], *args, **kwargs) for i in xrange(nbJobs))

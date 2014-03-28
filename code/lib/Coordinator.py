@@ -7,9 +7,7 @@ mechanism to all the data contained in a imageBuffer and keeping the
 consistency if it creates several feature vectors for one image
 """
 from abc import ABCMeta, abstractmethod
-
 import numpy as np
-from matplotlib.cbook import flatten
 
 from Logger import Progressable
 from TaskManager import SerialExecutor, ParallelExecutor
@@ -55,7 +53,7 @@ class Coordinator(Progressable):
         self._exec = ParallelExecutor(nbJobs, self.getLogger(),
                                       self.verbosity, tempFolder)
 
-    def process(self, imageBuffer):
+    def process(self, imageBuffer, learningPhase=True):
         """
         Extracts the feature vectors for the images contained in the
         :class:`ImageBuffer`
@@ -66,6 +64,10 @@ class Coordinator(Progressable):
         ----------
         imageBuffer : :class:`ImageBuffer`
             The data to process
+        learningPhase : bool (default : True)
+            Specifies whether it is the learning phase. For some
+            :class:`Coordinator`, this is not important but it might be for
+            the stateful ones
 
         Return
         ------
@@ -87,7 +89,8 @@ class Coordinator(Progressable):
         implementation of what is to be done is the responbility of the method
         :meth:`_onProcess`. It is this method that should be overloaded
         """
-        ls = self._exec("Extracting features", self._onProcess, imageBuffer)
+        ls = self._exec("Extracting features", self._onProcess, imageBuffer,
+                        learningPhase=learningPhase)
 
         # Reduce
         self.logMsg("Concatenating the data...", 35)
@@ -97,7 +100,7 @@ class Coordinator(Progressable):
         return X, y
 
     @abstractmethod
-    def _onProcess(self, imageBuffer):
+    def _onProcess(self, imageBuffer, learningPhase):
         """
         Extracts the feature vectors for the images contained in the
         :class:`ImageBuffer`
@@ -108,6 +111,10 @@ class Coordinator(Progressable):
         ----------
         imageBuffer : :class:`ImageBuffer`
             The data to process
+        learningPhase : bool (default : True)
+            Specifies whether it is the learning phase. For some
+            :class:`Coordinator`, this is not important but it might be for
+            the stateful ones
 
         Return
         ------
@@ -125,9 +132,9 @@ class Coordinator(Progressable):
         """
         pass
 
-    def __call__(self, imageBuffer):
+    def __call__(self, imageBuffer, learningPhase):
         """Delegate to :meth:`process`"""
-        return self.process(imageBuffer)
+        return self.process(imageBuffer, learningPhase)
 
     def getLogger(self):
         """
@@ -175,7 +182,7 @@ class PixitCoordinator(Coordinator):
         self._multiSWExtractor = multiSWExtractor
         self._featureExtractor = featureExtractor
 
-    def _onProcess(self, imageBuffer):
+    def _onProcess(self, imageBuffer, learningPhase):
         """Overload"""
         ls = []
         y = []
@@ -239,7 +246,7 @@ class RandConvCoordinator(Coordinator):
         self._convolExtractor = convolutionalExtractor
         self._featureExtractor = featureExtractor
 
-    def _onProcess(self, imageBuffer):
+    def _onProcess(self, imageBuffer, learningPhase):
         """Overload"""
         ls = []
         y = []
@@ -318,7 +325,7 @@ class RandConvCoordinator(Coordinator):
             The number of features per group
         """
         nbGroups = len(self.getFilters())
-        if self.isImageIncluded:
+        if self.isImageIncluded():
             nbGroups += 1
         nbFeaturePerGroup = nbFeatures // nbGroups
         return nbFeatures, nbGroups, nbFeaturePerGroup
@@ -387,10 +394,14 @@ class CompressRandConvCoordinator(RandConvCoordinator):
     the extracted features.
     The compression operates on each filter ouput separately and depends
     on the given :class:`Compressor`.
-    It is possible not to include the first image in the compression
+
+    It is possible not to include the first image in the compression.
+
+    This is a stateful :class:`Coordinator`.
     """
-    def __init__(self, convolutionalExtractor, featureExtractor, compressor,
-                 compressOriginalImage=True, logger=None, verbosity=None):
+    def __init__(self, convolutionalExtractor, featureExtractor,
+                 compressorFactory, compressOriginalImage=True,
+                 logger=None, verbosity=None):
         """
         Construct a :class:`CompressRandConvCoordinator`
 
@@ -402,9 +413,9 @@ class CompressRandConvCoordinator(RandConvCoordinator):
         featureExtractor: :class:`FeatureExtractor`
             The component responsible for extracting the features from
             each filtered and aggregated subwindow
-        compressor : :class:`Compressor`
-            The component responsible for compressing the feature vector
-            filterwise.
+        compressorFactory : callable(void)
+            A factory method to create :class:`Compressor`. It must be
+            parameterless
 
         Note
         ----
@@ -413,20 +424,97 @@ class CompressRandConvCoordinator(RandConvCoordinator):
         """
         RandConvCoordinator.__init__(self, convolutionalExtractor,
                                      featureExtractor, logger, verbosity)
-        self._compressor = compressor
+        self._compressorFactory = compressorFactory
         self._compressImage = compressOriginalImage
 
-    def process(self, imageBuffer):
+    def process(self, imageBuffer, learningPhase):
         imgIncluded = self._convolExtractor.isImageIncluded()
+        #Basic extraction
         X, y = RandConvCoordinator.process(self, imageBuffer)
+        #Compression
         data = self._slice(X)
-        ls = self._exec(self._compressor.compress, data, y)
-        X2 = np.hstack(ls)
+        if learningPhase:
+            ls = self._exec("Learning and applying feature compression",
+                            self._multiFitTransfrom, data, y)
+            #Partial putting back together
+            self._compressors = []
+            Xs = []
+            for lsi in ls:
+                for x, c in lsi:
+                    self._compressors.append(c)
+                    Xs.append(x)
+        else:
+            pairs = zip(data, self._compressors)
+            ls = self._exec("Feature compression", self._multiTransform, pairs)
+            #Partial putting back together
+            Xs = []
+            for lsi in ls:
+                for xi in lsi:
+                    Xs.append(xi)
+        #Put back the data together appropriately
+        X2 = np.hstack(Xs)
         if imgIncluded and not self._compressImage:
-            _, _, endImage = self._groupsInfo(X)
-            imgX = X.tranpose()[0:endImage]
+            _, _, endImage = self._groupsInfo(X.shape[1])
+            imgX = X.transpose()
+            imgX = imgX[0:endImage]
             X2 = np.hstack((imgX.transpose(), X2))
         return X2, y
+
+    def _doProcess(self, imageBuffer):
+        pass
+
+    def _multiFitTransfrom(self, Xs, y):
+        """
+        Learn and apply the compression on each element of Xs
+
+        Parameters
+        ----------
+        Xs : iterable of feature arrays
+            A list of features array. A given row of each feature vector
+            is linked with the corresponding label, thus each element of Xs
+            must have the same height (first index) which must also equal the
+            length of y
+        y : iterable of int
+            the labels of each row
+
+        Return
+        ------
+        ls : list of pairs = (Xi, comp_i)
+        Xi : feature array
+            The compressed feature array corresponding to the ith element
+            of Xs
+        comp_i : :class:`Compressor`
+            The compressor which compressed the ith element of Xs
+        """
+        ls = []
+        for X in Xs:
+            compressor = self._compressorFactory()
+            X2 = compressor.fit_transform(X, y)
+            ls.append((X2, compressor))
+        return ls
+
+    def _multiTransform(self, ls):
+        """
+        Apply the compression previously learnt on each element of Xs
+
+        Paramaters
+        ----------
+        ls : iterable of pairs = (Xi, comp_i)
+        Xi : feature array
+            A feature array to compress
+        comp_i : :class:`Compressor`
+            A :class:`Compressor` instance to use to compress the corresponding
+            Xi
+
+        Return
+        ------
+        Xs : iterable of feature arrays
+            The compressed feature arrays (in the same order as given)
+        """
+        Xs = []
+        for Xi, comp_i in ls:
+            Xs.append(comp_i.transform(Xi))
+        return Xs
 
     def _slice(self, X):
         """
@@ -441,9 +529,9 @@ class CompressRandConvCoordinator(RandConvCoordinator):
         A iterable subarray of the feature array as group of features generated
         by the same filter
         """
-        XTranspose = X.transpose()  # Only a view
+        XTranspose = np.array(X).transpose()
         slices = []
-        nbFeatures, nbGroups, nbFeaturePerGroup = self._groupsInfo(X)
+        nbFeatures, nbGroups, nbFeaturePerGroup = self._groupsInfo(X.shape[1])
         imgIncluded = self._convolExtractor.isImageIncluded()
         for i in xrange(nbGroups):
             Xtmp = XTranspose[i*nbFeaturePerGroup:(i+1)*nbFeaturePerGroup]
@@ -455,7 +543,7 @@ class CompressRandConvCoordinator(RandConvCoordinator):
 
     def featureGroups(self, nbFeatures):
         """
-        Returns an iterable of start indices of the feature groups of X and
+        Returns an iterabtransposele of start indices of the feature groups of X and
         the number of features
 
         Parameters
@@ -470,19 +558,18 @@ class CompressRandConvCoordinator(RandConvCoordinator):
             The number of features
         nbGroups : int
             The number of groups
-        ls : iterable of int
+        ls : sequence of int
             Returns an iterable of start indices of the feature groups of X
             and the number of features
         """
         if (not self._compressImage) and self._convolExtractor.isImageIncluded():
-            nbGroups = self.getFilters()  # Discouting the image
+            nbGroups = len(self.getFilters())  # Discouting the image
             nbFeaturePerGroup = (nbFeatures - self._imgSize) // nbGroups
             ls = [0]
-            starts = xrange(self._imgSize, nbFeatures+1, nbFeaturePerGroup)
-            return (nbFeatures, nbGroups+1, nbFeaturePerGroup,
-                    flatten([ls, starts]))
+            starts = range(self._imgSize, nbFeatures+1, nbFeaturePerGroup)
+            return (nbFeatures, nbGroups+1, ls+starts)
         else:
-            return RandConvCoordinator.featureGroups(self, X)
+            return RandConvCoordinator.featureGroups(self, nbFeatures)
 
 #TODO XXX overload _grpInfo
 
