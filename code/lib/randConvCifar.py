@@ -18,7 +18,10 @@ from CifarLoader import CifarFromNumpies
 from ImageBuffer import FileImageBuffer, NumpyImageLoader
 
 
-def run():
+def run(includeOriginalImage=True,
+        maxFeatures="auto",
+        nbTrees=30,
+        random=True):
 
     #======HYPER PARAMETERS======#
     #----RandConv param
@@ -44,25 +47,28 @@ def run():
     subwindowInterpolation = SubWindowExtractor.INTERPOLATION_BILINEAR
 
     #Misc.
-    includeOriginalImage = True
+    includeOriginalImage = includeOriginalImage
+    random = random
     nbJobs = -1
     verbosity = 8
     tempFolder = "tmp/"
 
     #-----Extratree param
-    nbTrees = 30
-    maxFeatures = "auto"
+    nbTrees = nbTrees
+    maxFeatures = maxFeatures
     maxDepth = None
     minSamplesSplit = 2
     minSamplesLeaf = 1
     bootstrap = False
     nbJobsEstimator = -1
     randomState = None
+    if random:
+        randomState = 100
     verbose = 8
 
     #=====DATA=====#
-#    maxLearningSize = 50000
-#    maxTestingSize = 10000
+    maxLearningSize = 50000
+    maxTestingSize = 10000
 
     learningUse = 500
     learningSetDir = "learn/"
@@ -71,6 +77,12 @@ def run():
     testingUse = 500
     testingSetDir = "test/"
     testingIndexFile = "0index"
+
+    if learningUse > maxLearningSize:
+        learningUse = maxLearningSize
+
+    if testingUse > maxTestingSize:
+        testingUse = maxTestingSize
 
     #======INSTANTIATING========#
     os.environ["JOBLIB_TEMP_FOLDER"] = "/home/jmbegon/jmbegon/code/work/tmp/"
@@ -93,7 +105,8 @@ def run():
         includeOriginalImage=includeOriginalImage,
         nbJobs=nbJobs,
         verbosity=verbosity,
-        tempFolder=tempFolder)
+        tempFolder=tempFolder,
+        random=random)
 
     #--Extra-tree--
     baseClassif = ExtraTreesClassifier(nbTrees,
@@ -158,6 +171,9 @@ def run():
     print "fixedSize", fixedSize
     print "------------Misc-----------------"
     print "includeOriginalImage", includeOriginalImage
+    print "random", random
+    print "tempFolder", tempFolder
+    print "verbosity", verbosity
     print "nbJobs", nbJobs
     print "--------ExtraTrees----------"
     print "nbTrees", nbTrees
@@ -167,6 +183,7 @@ def run():
     print "minSamplesLeaf", minSamplesLeaf
     print "bootstrap", bootstrap
     print "nbJobsEstimator", nbJobsEstimator
+    print "verbose", verbose
     print "randomState", randomState
     print "------------Data---------------"
     print "LearningSet size", len(learningSet)

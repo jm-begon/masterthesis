@@ -10,6 +10,7 @@ A filter is 2D numpy array which can be used to filter an image with a
 convolution operator
 """
 import numpy as np
+import scipy.ndimage.filters as scFilters
 
 __all__ = ["FilterGenerator", "FixSizeFilterGenerator", "FiniteFilter",
            "Finite3Filter", "Finite3SameFilter"]
@@ -244,8 +245,28 @@ class Finite3SameFilter(Finite3Filter):
         self._filters = filters
 
 
+def meanFilter(width, height):
+    return np.ones((height, width))/(width*height)
+
+
+def sobelHzFilter():
+    return np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
+
+
+def sobelVFilter():
+    return np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
+
+
+def laplacianFilter():
+    return np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]])
+
+def gaussianFilter(width, height, stdev):
+    identity = np.zeros((height, width))
+    identity[height//2][width//2] = 1
+    return scFilters.gaussian_filter(identity, stdev)
+
 if __name__ == "__main__":
-    test = True
+    test = False
     if test:
         from NumberGenerator import (NumberGenerator,
                                      IntegerUniformGenerator,
