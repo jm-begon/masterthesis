@@ -25,15 +25,17 @@ if __name__ == "__main__":
         tup = rc.run(includeOriginalImage=includeOriginalImage,
                      nbTrees=nbTree[i],
                      random=False)
-        f = fileName+"_tree"+str(nbTree)
-        cPickle.dump(tup, f, protocol=2)
+        fn = fileName+"_tree"+str(nbTree[i])
+        with open(fn, "wb") as f:
+            cPickle.dump(tup, f, protocol=2)
         tupTree.append(tup)
         #Var nb features
         tup = rc.run(includeOriginalImage=includeOriginalImage,
                      maxFeatures=nbFeatures[i],
                      random=False)
-        f = fileName+"_tree"+str(nbTree)
-        cPickle.dump(tup, f, protocol=2)
+        fn = fileName+"_feature"+str(nbFeatures[i])
+        with open(fn, "wb") as f:
+            cPickle.dump(tup, f, protocol=2)
         tupFeat.append(tup)
         #Signal
         print ">>>> ", i, " done"
