@@ -21,7 +21,8 @@ class FilterGenerator:
     ===============
     FilterGenerator
     ===============
-    A base class which generate randomly filters with specified features
+    A base class which generate randomly filters with specified features.
+    A filter is a 2D numpy array.
 
     Constants
     ---------
@@ -38,6 +39,7 @@ class FilterGenerator:
     NORMALISATION_MEAN = 1
     NORMALISATION_VAR = 2
     NORMALISATION_MEANVAR = 3
+    NORMALISATION_SUMTO1 = 4
     EPSILON = 10**-15
 
     def __init__(self, numberValueGenerator, numberSizeGenerator,
@@ -75,6 +77,34 @@ class FilterGenerator:
             width = self._sizeGen.getNumber()
         return height, width
 
+    def _normalize(self, filt):
+        """
+        Normalize the filter according to the instance policy
+
+        Parameters
+        ----------
+        filt : 2D numpy array
+            The filter to normalize
+
+        Return
+        ------
+        normalizedFilter : 2D numpy array of the same shape
+            the normalized filter
+        """
+        #Normalisation
+        if self._normalisation == FilterGenerator.NORMALISATION_SUMTO1:
+            return filt/sum(filt)
+        if (self._normalisation == FilterGenerator.NORMALISATION_MEAN or
+                self._normalisation == FilterGenerator.NORMALISATION_MEANVAR):
+            filt = filt - filt.mean()
+
+        if (self._normalisation == FilterGenerator.NORMALISATION_VAR or
+                self._normalisation == FilterGenerator.NORMALISATION_MEANVAR):
+            stdev = filt.std()
+            if abs(stdev) > FilterGenerator.EPSILON:
+                filt = filt/stdev
+        return filt
+
     def next(self):
         """
         Return a newly generated filter
@@ -86,18 +116,8 @@ class FilterGenerator:
         for i in xrange(height):
             for j in xrange(width):
                 linearFilter[i][j] = self._valGen.getNumber()
-        #Normalisation
-        if (self._normalisation == FilterGenerator.NORMALISATION_MEAN or
-                self._normalisation == FilterGenerator.NORMALISATION_MEANVAR):
-            linearFilter = linearFilter - linearFilter.mean()
 
-        if (self._normalisation == FilterGenerator.NORMALISATION_VAR or
-                self._normalisation == FilterGenerator.NORMALISATION_MEANVAR):
-            stdev = linearFilter.std()
-            if abs(stdev) > FilterGenerator.EPSILON:
-                linearFilter = linearFilter/stdev
-
-        return linearFilter
+        return self._normalize(linearFilter)
 
 
 class FixSizeFilterGenerator(FilterGenerator):

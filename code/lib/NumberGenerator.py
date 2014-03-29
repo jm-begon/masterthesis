@@ -6,7 +6,8 @@ A set of number generator
 """
 from sklearn.utils import check_random_state
 
-__all__ = ["NumberGenerator", "IntegerUniformGenerator", "OddUniformGenerator"]
+__all__ = ["NumberGenerator", "IntegerUniformGenerator", "OddUniformGenerator",
+           "GaussianNumberGenerator"]
 
 
 class NumberGenerator:
@@ -76,6 +77,44 @@ class NumberGenerator:
         if maxVal is None:
             maxVal = self._max
         return self._doGetNumber(minVal, maxVal)
+
+
+class GaussianNumberGenerator(NumberGenerator):
+    """
+    =======================
+    GaussianNumberGenerator
+    =======================
+    Generate real number from a Gaussian law within a bounded interval.
+    """
+
+    def __init__(self, minVal=0, maxVal=1, seed=None, meanVal=.5, stdev=1):
+        """
+        Creates a :class:`GaussianNumberGenerator``instance
+
+        Parameters
+        ----------
+        minVal : float (default : 0)
+            The minimum value from which to draw
+        maxVal : float (default : 1)
+            The maximum value from which to draw
+        seed : int or None (default : None)
+            if seed is int : initiate the random generator with this seed
+        meanVal : float (default : 0.5)
+            The mean value of a the Gaussian law
+        stdev : float (default : 1)
+            The standard deviation of the Gaussian law
+        """
+        NumberGenerator.__init__(self, minVal, maxVal, seed)
+        self._mean = meanVal
+        self._std = stdev
+
+        def _doGetNumber(self, minVal, maxVal):
+            val = self._randGen.normal(self._mean, self._stdev)
+            if val < minVal:
+                return minVal
+            if val > maxVal:
+                return maxVal
+            return val
 
 
 class IntegerUniformGenerator(NumberGenerator):

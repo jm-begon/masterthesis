@@ -30,7 +30,8 @@ def coordinatorPixitFactory(
         subwindowTargetWidth=16, subwindowTargetHeight=16,
         fixedSize=False,
         subwindowInterpolation=SubWindowExtractor.INTERPOLATION_BILINEAR,
-        nbJobs=-1, verbosity=10, tempFolder=None):
+        nbJobs=-1, verbosity=10, tempFolder=None,
+        random=True):
     """
     Factory method to create :class:`PixitCoordinator`
 
@@ -66,6 +67,8 @@ def coordinatorPixitFactory(
     tempFolder : string (directory path) (default : None)
             The temporary folder used for memmap. If none, some default folder
             will be use (see the :class:`ParallelCoordinator`)
+    random : bool (default : True)
+        Whether to use randomness or use a predefined seed
 
     Return
     ------
@@ -81,8 +84,12 @@ def coordinatorPixitFactory(
         Base instance of :class:`ImageLinearizationExtractor`
     """
 
+    swngSeed = 0
+    #Randomness
+    if random:
+        swngSeed = None
     #SubWindowExtractor
-    swNumGenerator = NumberGenerator()
+    swNumGenerator = NumberGenerator(seed=swngSeed)
     if fixedSize:
         swExtractor = FixTargetSWExtractor(subwindowTargetWidth,
                                            subwindowTargetHeight,
@@ -126,7 +133,8 @@ def coordinatorRandConvFactory(
         subwindowTargetWidth=16, subwindowTargetHeight=16,
         subwindowInterpolation=SubWindowExtractor.INTERPOLATION_BILINEAR,
         includeOriginalImage=False,
-        nbJobs=-1, verbosity=10, tempFolder=None):
+        nbJobs=-1, verbosity=10, tempFolder=None,
+        random=True):
     """
     Factory method to create :class:`RandConvCoordinator` tuned for RGB images
 
@@ -182,6 +190,9 @@ def coordinatorRandConvFactory(
             The temporary folder used for memmap. If none, some default folder
             will be use (see the :class:`ParallelCoordinator`)
 
+    random : bool (default : True)
+        Whether to use randomness or use a predefined seed
+
     Return
     ------
         coordinator : :class:`Coordinator`
@@ -206,11 +217,21 @@ def coordinatorRandConvFactory(
     - Feature extractor
         Base instance of :class:`ImageLinearizationExtractor`
     """
+    #RANDOMNESS
+    swngSeed = 0
+    filtValGenSeed = 1
+    filtSizeGenSeed = 2
+    if random is None:
+        swngSeed = None
+        filtValGenSeed = None
+        filtSizeGenSeed = None
 
     #CONVOLUTIONAL EXTRACTOR
     #Filter generator
-    filterValGenerator = NumberGenerator(filterMinVal, filterMaxVal)
-    filterSizeGenerator = OddUniformGenerator(filterMinSize, filterMaxSize)
+    filterValGenerator = NumberGenerator(filterMinVal, filterMaxVal,
+                                         seed=filtValGenSeed)
+    filterSizeGenerator = OddUniformGenerator(filterMinSize, filterMaxSize,
+                                              seed=filtSizeGenSeed)
     baseFilterGenerator = FilterGenerator(filterValGenerator,
                                           filterSizeGenerator,
                                           normalisation=filterNormalisation)
@@ -225,7 +246,7 @@ def coordinatorRandConvFactory(
                                    subwindowTargetWidth, subwindowTargetHeight)
 
     #SubWindowExtractor
-    swNumGenerator = NumberGenerator()
+    swNumGenerator = NumberGenerator(seed=swngSeed)
     swExtractor = SubWindowExtractor(subwindowMinSizeRatio,
                                      subwindowMaxSizeRatio,
                                      subwindowTargetWidth,
@@ -269,7 +290,8 @@ def coordinatorCompressRandConvFactory(
         includeOriginalImage=False,
         compressorType="Sampling", nbCompressedFeatures=1,
         compressOriginalImage=True,
-        nbJobs=-1, verbosity=10, tempFolder=None):
+        nbJobs=-1, verbosity=10, tempFolder=None,
+        random=True):
     """
     Factory method to create :class:`RandConvCoordinator` tuned for RGB images
 
@@ -335,6 +357,8 @@ def coordinatorCompressRandConvFactory(
             The temporary folder used for memmap. If none, some default folder
             will be use (see the :class:`ParallelCoordinator`)
 
+    random : bool (default : True)
+        Whether to use randomness or use a predefined seed
     Return
     ------
         coordinator : :class:`Coordinator`
@@ -360,10 +384,21 @@ def coordinatorCompressRandConvFactory(
         Base instance of :class:`ImageLinearizationExtractor`
     """
 
+    #RANDOMNESS
+    swngSeed = 0
+    filtValGenSeed = 1
+    filtSizeGenSeed = 2
+    if random is None:
+        swngSeed = None
+        filtValGenSeed = None
+        filtSizeGenSeed = None
+
     #CONVOLUTIONAL EXTRACTOR
     #Filter generator
-    filterValGenerator = NumberGenerator(filterMinVal, filterMaxVal)
-    filterSizeGenerator = OddUniformGenerator(filterMinSize, filterMaxSize)
+    filterValGenerator = NumberGenerator(filterMinVal, filterMaxVal,
+                                         seed=filtValGenSeed)
+    filterSizeGenerator = OddUniformGenerator(filterMinSize, filterMaxSize,
+                                              seed=filtSizeGenSeed)
     baseFilterGenerator = FilterGenerator(filterValGenerator,
                                           filterSizeGenerator,
                                           normalisation=filterNormalisation)
@@ -378,7 +413,7 @@ def coordinatorCompressRandConvFactory(
                                    subwindowTargetWidth, subwindowTargetHeight)
 
     #SubWindowExtractor
-    swNumGenerator = NumberGenerator()
+    swNumGenerator = NumberGenerator(seed=swngSeed)
     swExtractor = SubWindowExtractor(subwindowMinSizeRatio,
                                      subwindowMaxSizeRatio,
                                      subwindowTargetWidth,
