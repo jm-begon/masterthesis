@@ -39,5 +39,7 @@ if __name__ == "__main__":
         tupFeat.append(tup)
         #Signal
         print ">>>> ", i, " done"
+        print "Trees"
         print tupTree
+        print "Features"
         print tupFeat
