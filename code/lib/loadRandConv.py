@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 # Author : Jean-Michel Begon
-# Date : Mar 10 2014
+# Date : Mar 31 2014
 """
 A script to run the random and convolution classifcation
 """
 import sys
 import os
 from time import time
+import cPickle as pickle
 
 from sklearn.ensemble import ExtraTreesClassifier
 
@@ -19,6 +20,28 @@ from ImageBuffer import FileImageBuffer, NumpyImageLoader
 
 
 #======HYPER PARAMETERS======#
+#-----Extratree param
+nbTrees = 30
+maxFeatures = "auto"
+maxDepth = None
+minSamplesSplit = 2
+minSamplesLeaf = 1
+bootstrap = False
+nbJobsEstimator = -1
+verbose = 8
+
+#=====DATA=====#
+maxLearningSize = 50000
+maxTestingSize = 10000
+
+learningUse = 500
+learningSetDir = "learn/"
+learningIndexFile = "0index"
+
+testingUse = 500
+testingSetDir = "test/"
+testingIndexFile = "0index"
+
 #----RandConv param
 #Filtering
 nb_filters = 100
@@ -48,42 +71,12 @@ nbJobs = -1
 verbosity = 8
 tempFolder = "tmp/"
 
-#-----Extratree param
-nbTrees = 30
-maxFeatures = "auto"
-maxDepth = None
-minSamplesSplit = 2
-minSamplesLeaf = 1
-bootstrap = False
-nbJobsEstimator = -1
-verbose = 8
 
-#=====DATA=====#
-maxLearningSize = 50000
-maxTestingSize = 10000
-
-learningUse = 500
-learningSetDir = "learn/"
-learningIndexFile = "0index"
-
-testingUse = 500
-testingSetDir = "test/"
-testingIndexFile = "0index"
-
-
-def run(**kwargs):
+def run(lsFile, tsFile, **kwargs):
 
     randomState = None
     if random:
         randomState = 100
-
-    lsSize = learningUse
-    if learningUse > maxLearningSize:
-        lsSize = maxLearningSize
-
-    tsSize = testingUse
-    if testingUse > maxTestingSize:
-        tsSize = maxTestingSize
 
     #======INSTANTIATING========#
     os.environ["JOBLIB_TEMP_FOLDER"] = "/home/jmbegon/jmbegon/code/work/tmp/"
@@ -124,10 +117,14 @@ def run(**kwargs):
     classifier = Classifier(randConvCoord, baseClassif)
 
     #--Data--
+    with open(lsFile, "wb") as f:
+        lsSize, Xls, yls = pickle.load(f, protocol=2)
     loader = CifarFromNumpies(learningSetDir, learningIndexFile)
     learningSet = FileImageBuffer(loader.getFiles(), NumpyImageLoader())
     learningSet = learningSet[0:lsSize]
 
+    with open(tsFile, "wb") as f:
+        tsSize, Xts, yts = pickle.load(f, protocol=2)
     loader = CifarFromNumpies(testingSetDir, testingIndexFile)
     testingSet = FileImageBuffer(loader.getFiles(), NumpyImageLoader())
     testingSet = testingSet[0:tsSize]
@@ -136,46 +133,23 @@ def run(**kwargs):
     #--Learning--#
     print "Starting learning"
     fitStart = time()
-    classifier.fit(learningSet)
+    baseClassif.fit(Xls, yls)
     fitEnd = time()
-    print "Learning done", (fitEnd-fitStart), "seconds"
+    print "Learning done", (fitEnd-fitStart), "seconds (no extraction)"
     sys.stdout.flush()
 
     #--Testing--#
     y_truth = testingSet.getLabels()
     predStart = time()
-    y_pred = classifier.predict(testingSet)
+    y_pred = classifier._predict(Xts, lsSize)
     predEnd = time()
-    accuracy = classifier.accuracy(y_pred, y_truth)
-    confMat = classifier.confusionMatrix(y_pred, y_truth)
 
     #====ANALYSIS=====#
+    accuracy = classifier.accuracy(y_pred, y_truth)
+    confMat = classifier.confusionMatrix(y_pred, y_truth)
     importance, order = randConvCoord.importancePerFeatureGrp(baseClassif)
 
     print "========================================="
-    print "-----------Filtering--------------"
-    print "nb_filters", nb_filters
-    print "filter_min_val", filter_min_val
-    print "filter_max_val", filter_max_val
-    print "filterMinSize", filterMinSize
-    print "filterMaxSize", filterMaxSize
-    print "filterNormalisation", filterNormalisation
-    print "----------Pooling--------------"
-    print "aggregatorNeighborhoodWidth", aggregatorNeighborhoodWidth
-    print "aggregatorNeighbordhoodHeight", aggregatorNeighbordhoodHeight
-    print "--------SW extractor----------"
-    print "#Subwindows", nbSubwindows
-    print "subwindowMinSizeRatio", subwindowMinSizeRatio
-    print "subwindowMaxSizeRatio", subwindowMaxSizeRatio
-    print "subwindowTargetWidth", subwindowTargetWidth
-    print "subwindowTargetHeight", subwindowTargetHeight
-    print "fixedSize", fixedSize
-    print "------------Misc-----------------"
-    print "includeOriginalImage", includeOriginalImage
-    print "random", random
-    print "tempFolder", tempFolder
-    print "verbosity", verbosity
-    print "nbJobs", nbJobs
     print "--------ExtraTrees----------"
     print "nbTrees", nbTrees
     print "maxFeatures", maxFeatures
@@ -190,8 +164,8 @@ def run(**kwargs):
     print "LearningSet size", len(learningSet)
     print "TestingSet size", len(testingSet)
     print "-------------------------------"
-    print "Fit time", (fitEnd-fitStart), "seconds"
-    print "Classifcation time", (predEnd-predStart), "seconds"
+    print "Fit time (no extraction)", (fitEnd-fitStart), "seconds"
+    print "Classifcation time (no extraction)", (predEnd-predStart), "seconds"
     print "Accuracy", accuracy
 
     return accuracy, confMat, importance, order

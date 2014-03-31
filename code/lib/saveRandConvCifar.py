@@ -1,22 +1,20 @@
 # -*- coding: utf-8 -*-
 # Author : Jean-Michel Begon
-# Date : Mar 10 2014
+# Date : Mar 31 2014
 """
 A script to run the random and convolution classifcation
 """
 import sys
 import os
 from time import time
+import cPickle as pickle
 
-from sklearn.ensemble import ExtraTreesClassifier
 
 from CoordinatorFactory import coordinatorRandConvFactory
-from Classifier import Classifier
 from SubWindowExtractor import SubWindowExtractor
 from FilterGenerator import FilterGenerator
 from CifarLoader import CifarFromNumpies
 from ImageBuffer import FileImageBuffer, NumpyImageLoader
-
 
 #======HYPER PARAMETERS======#
 #----RandConv param
@@ -48,16 +46,6 @@ nbJobs = -1
 verbosity = 8
 tempFolder = "tmp/"
 
-#-----Extratree param
-nbTrees = 30
-maxFeatures = "auto"
-maxDepth = None
-minSamplesSplit = 2
-minSamplesLeaf = 1
-bootstrap = False
-nbJobsEstimator = -1
-verbose = 8
-
 #=====DATA=====#
 maxLearningSize = 50000
 maxTestingSize = 10000
@@ -71,11 +59,7 @@ testingSetDir = "test/"
 testingIndexFile = "0index"
 
 
-def run(**kwargs):
-
-    randomState = None
-    if random:
-        randomState = 100
+def run(lsName, tsName, **kwargs):
 
     lsSize = learningUse
     if learningUse > maxLearningSize:
@@ -87,7 +71,8 @@ def run(**kwargs):
 
     #======INSTANTIATING========#
     os.environ["JOBLIB_TEMP_FOLDER"] = "/home/jmbegon/jmbegon/code/work/tmp/"
-    #--Pixit--
+
+    #--Coordinator--
     randConvCoord = coordinatorRandConvFactory(
         nbFilters=nb_filters,
         filterMinVal=filter_min_val,
@@ -109,20 +94,6 @@ def run(**kwargs):
         tempFolder=tempFolder,
         random=random)
 
-    #--Extra-tree--
-    baseClassif = ExtraTreesClassifier(nbTrees,
-                                       max_features=maxFeatures,
-                                       max_depth=maxDepth,
-                                       min_samples_split=minSamplesSplit,
-                                       min_samples_leaf=minSamplesLeaf,
-                                       bootstrap=bootstrap,
-                                       n_jobs=nbJobsEstimator,
-                                       random_state=randomState,
-                                       verbose=verbose)
-
-    #--Classifier
-    classifier = Classifier(randConvCoord, baseClassif)
-
     #--Data--
     loader = CifarFromNumpies(learningSetDir, learningIndexFile)
     learningSet = FileImageBuffer(loader.getFiles(), NumpyImageLoader())
@@ -136,21 +107,19 @@ def run(**kwargs):
     #--Learning--#
     print "Starting learning"
     fitStart = time()
-    classifier.fit(learningSet)
+    X, y = randConvCoord.process(learningSet, True)
+    with open(lsName, "wb") as f:
+            pickle.dump((lsSize, X, y), f, protocol=2)
     fitEnd = time()
     print "Learning done", (fitEnd-fitStart), "seconds"
     sys.stdout.flush()
 
     #--Testing--#
-    y_truth = testingSet.getLabels()
     predStart = time()
-    y_pred = classifier.predict(testingSet)
+    X, y = randConvCoord.process(testingSet, False)
+    with open(tsName, "wb") as f:
+            pickle.dump((tsSize, X, y), f, protocol=2)
     predEnd = time()
-    accuracy = classifier.accuracy(y_pred, y_truth)
-    confMat = classifier.confusionMatrix(y_pred, y_truth)
-
-    #====ANALYSIS=====#
-    importance, order = randConvCoord.importancePerFeatureGrp(baseClassif)
 
     print "========================================="
     print "-----------Filtering--------------"
@@ -176,29 +145,16 @@ def run(**kwargs):
     print "tempFolder", tempFolder
     print "verbosity", verbosity
     print "nbJobs", nbJobs
-    print "--------ExtraTrees----------"
-    print "nbTrees", nbTrees
-    print "maxFeatures", maxFeatures
-    print "maxDepth", maxDepth
-    print "minSamplesSplit", minSamplesSplit
-    print "minSamplesLeaf", minSamplesLeaf
-    print "bootstrap", bootstrap
-    print "nbJobsEstimator", nbJobsEstimator
-    print "verbose", verbose
-    print "randomState", randomState
     print "------------Data---------------"
     print "LearningSet size", len(learningSet)
     print "TestingSet size", len(testingSet)
     print "-------------------------------"
     print "Fit time", (fitEnd-fitStart), "seconds"
     print "Classifcation time", (predEnd-predStart), "seconds"
-    print "Accuracy", accuracy
 
-    return accuracy, confMat, importance, order
 
 if __name__ == "__main__":
     acc, confMat, importance, order = run()
 
-    print "Confusion matrix :\n", confMat
     print "Feature importance :\n", importance
     print "Feature importance order :\n", order

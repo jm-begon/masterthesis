@@ -14,7 +14,7 @@ from TaskManager import SerialExecutor, ParallelExecutor
 from NumpyToPILConvertor import NumpyPILConvertor
 
 __all__ = ["PixitCoordinator", "RandConvCoordinator",
-           "CompressRandConvCoordinator"]
+           "CompressRandConvCoordinator", "LoadCoordinator"]
 
 
 class Coordinator(Progressable):
@@ -144,6 +144,31 @@ class Coordinator(Progressable):
             The internal logger (might be None)
         """
         return self._logger
+
+
+class LoadCoordinator(Coordinator):
+    """
+    ===============
+    LoadCoordinator
+    ===============
+    Pseudo :class:`Coordinator` which load a given file instead of processing
+    the :class:`ImageBuffer` instance.
+    """
+
+    def __init__(self, filename, logger=None, verbosity=None):
+        """
+        Construct a :class:`LoadCoordinator`
+
+        Parameters
+        ----------
+        filename : file or str
+            The path to the numpy file holding the 2D feature array
+        """
+        Coordinator.__init__(self, logger, verbosity)
+        self._file = filename
+
+        def process(self, imageBuffer=None, learningPhase=True):
+            return np.load(self._file)
 
 
 class PixitCoordinator(Coordinator):

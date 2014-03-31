@@ -149,7 +149,7 @@ class Classifier(Progressable):
 
         Return
         -------
-        list : list of list of int
+        list : list of list of float
             each entry is the probability vector of the input of the same
             index as computed by the base classifier
         """
@@ -159,11 +159,13 @@ class Classifier(Progressable):
         X_pred, _ = self._coord.process(image_buffer, learningPhase=False)
 
         self.endTask()
+        return self._predict_proba(X_pred, len(image_buffer))
 
+    def _predict_proba(self, X_pred, nb_objects):
         #Misc.
-        nbFactor = len(X_pred)/len(image_buffer)
+        nbFactor = len(X_pred)/nb_objects
 
-        y = np.zeros((len(image_buffer), len(self._userToClassifLUT)))
+        y = np.zeros((nb_objects, len(self._userToClassifLUT)))
 
         #Classifying the data
         self.setTask(1, "Classifying (prediction)")
@@ -172,10 +174,14 @@ class Classifier(Progressable):
 
         self.endTask()
 
-        for i in xrange(len(image_buffer)):
+        for i in xrange(nb_objects):
                 y[i] = np.sum(_y[i * nbFactor:(i + 1) * nbFactor], axis=0) / nbFactor
 
         return y
+
+    def _predict(self, X_pred, nb_objects):
+        y_classif = np.argmax(self._predict_proba(X_pred, nb_objects), axis=1)
+        return self._convertLabelsBackToUser(y_classif)
 
     def accuracy(self, y_pred, y_truth):
         """
