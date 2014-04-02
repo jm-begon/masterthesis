@@ -8,7 +8,7 @@ from abc import ABCMeta, abstractmethod
 import random
 import numpy as np
 
-from sklearn.decomposition import PCA
+#from sklearn.decomposition import PCA
 
 
 class Compressor:
@@ -194,4 +194,5 @@ class PCAFactory(CompressorFactory):
         CompressorFactory.__init__(self, n_components)
 
     def __call__(self):
-        return PCA(self.n_components)
+#        return PCA(self.n_components)
+        pass

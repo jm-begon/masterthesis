@@ -168,6 +168,9 @@ def run():
     print "fixedSize", fixedSize
     print "------------Misc-----------------"
     print "includeOriginalImage", includeOriginalImage
+    print "compressorType", compressorType
+    print "nbCompressedFeatures", nbCompressedFeatures
+    print "compressOriginalImage",  compressOriginalImage
     print "nbJobs", nbJobs
     print "--------ExtraTrees----------"
     print "nbTrees", nbTrees
