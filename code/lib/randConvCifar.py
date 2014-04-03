@@ -61,16 +61,44 @@ verbose = 8
 maxLearningSize = 50000
 maxTestingSize = 10000
 
-learningUse = 500
+learningUse = 100
 learningSetDir = "learn/"
 learningIndexFile = "0index"
 
-testingUse = 500
+testingUse = 100
 testingSetDir = "test/"
 testingIndexFile = "0index"
 
 
-def run(**kwargs):
+def run(nb_filters=nb_filters,
+        filter_min_val=filter_min_val,
+        filter_max_val=filter_max_val,
+        filterMinSize=filterMinSize,
+        filterMaxSize=filterMaxSize,
+        filterNormalisation=filterNormalisation,
+        poolings=poolings,
+        nbSubwindows=nbSubwindows,
+        subwindowMinSizeRatio=subwindowMinSizeRatio,
+        subwindowMaxSizeRatio=subwindowMaxSizeRatio,
+        subwindowTargetWidth=subwindowTargetWidth,
+        subwindowTargetHeight=subwindowTargetHeight,
+        fixedSize=fixedSize,
+        subwindowInterpolation=subwindowInterpolation,
+        includeOriginalImage=includeOriginalImage,
+        random=random,
+        nbJobs=nbJobs,
+        verbosity=verbosity,
+        tempFolder=tempFolder,
+        nbTrees=nbTrees,
+        maxFeatures=maxFeatures,
+        maxDepth=maxDepth,
+        minSamplesSplit=minSamplesSplit,
+        minSamplesLeaf=minSamplesLeaf,
+        bootstrap=bootstrap,
+        nbJobsEstimator=nbJobsEstimator,
+        verbose=verbose,
+        learningUse=learningUse,
+        testingUse=testingUse):
 
     randomState = None
     if random:
@@ -194,7 +222,7 @@ def run(**kwargs):
     return accuracy, confMat, importance, order
 
 if __name__ == "__main__":
-    acc, confMat, importance, order = run()
+    acc, confMat, importance, order = run(nb_filters=10)
 
     print "Confusion matrix :\n", confMat
     print "Feature importance :\n", importance

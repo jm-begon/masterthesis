@@ -53,16 +53,38 @@ verbose = 8
 maxLearningSize = 50000
 maxTestingSize = 10000
 
-learningUse = 500
+learningUse = 100
 learningSetDir = "learn/"
 learningIndexFile = "0index"
 
-testingUse = 500
+testingUse = 100
 testingSetDir = "test/"
 testingIndexFile = "0index"
 
 
-def run(**kwargs):
+def run(poolings=poolings,
+        nbSubwindows=nbSubwindows,
+        subwindowMinSizeRatio=subwindowMinSizeRatio,
+        subwindowMaxSizeRatio=subwindowMaxSizeRatio,
+        subwindowTargetWidth=subwindowTargetWidth,
+        subwindowTargetHeight=subwindowTargetHeight,
+        fixedSize=fixedSize,
+        subwindowInterpolation=subwindowInterpolation,
+        includeOriginalImage=includeOriginalImage,
+        random=random,
+        nbJobs=nbJobs,
+        verbosity=verbosity,
+        tempFolder=tempFolder,
+        nbTrees=nbTrees,
+        maxFeatures=maxFeatures,
+        maxDepth=maxDepth,
+        minSamplesSplit=minSamplesSplit,
+        minSamplesLeaf=minSamplesLeaf,
+        bootstrap=bootstrap,
+        nbJobsEstimator=nbJobsEstimator,
+        verbose=verbose,
+        learningUse=learningUse,
+        testingUse=testingUse):
 
     randomState = None
     if random:
