@@ -10,7 +10,7 @@ from time import time
 
 from sklearn.ensemble import ExtraTreesClassifier
 
-from CoordinatorFactory import coordinatorRandConvFactory
+from CoordinatorFactory import Const, coordinatorRandConvFactory
 from Classifier import Classifier
 from SubWindowExtractor import SubWindowExtractor
 from FilterGenerator import FilterGenerator
@@ -29,8 +29,7 @@ filterMaxSize = 32
 filterNormalisation = FilterGenerator.NORMALISATION_MEANVAR
 
 #Aggregation
-aggregatorNeighborhoodWidth = 2
-aggregatorNeighbordhoodHeight = 2
+poolings = [(2, 2, Const.POOLING_AGGREG_AVG)]
 
 #Subwindow
 nbSubwindows = 10
@@ -99,8 +98,7 @@ def run(**kwargs):
         subwindowMaxSizeRatio=subwindowMaxSizeRatio,
         subwindowTargetWidth=subwindowTargetWidth,
         subwindowTargetHeight=subwindowTargetHeight,
-        aggregatorNeighborhoodWidth=aggregatorNeighborhoodWidth,
-        aggregatorNeighbordhoodHeight=aggregatorNeighbordhoodHeight,
+        poolings=poolings,
         filterNormalisation=filterNormalisation,
         subwindowInterpolation=subwindowInterpolation,
         includeOriginalImage=includeOriginalImage,
@@ -161,8 +159,7 @@ def run(**kwargs):
     print "filterMaxSize", filterMaxSize
     print "filterNormalisation", filterNormalisation
     print "----------Pooling--------------"
-    print "aggregatorNeighborhoodWidth", aggregatorNeighborhoodWidth
-    print "aggregatorNeighbordhoodHeight", aggregatorNeighbordhoodHeight
+    print "poolings", poolings
     print "--------SW extractor----------"
     print "#Subwindows", nbSubwindows
     print "subwindowMinSizeRatio", subwindowMinSizeRatio

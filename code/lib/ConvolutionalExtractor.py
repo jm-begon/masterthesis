@@ -28,9 +28,9 @@ class ConvolutionalExtractor:
         are then applied by a :class:`Convolver` to the given image thus
         creating several new images (one per filter). Let us call them
         *image2*.
-    2. Aggregation
+    2. Pooling
         Each new *image2* is aggregated by a :class:`Aggregator`, yielding one
-        smaller image (let us call them *image3*) by processed *image2*s.
+        image (let us call them *image3*) by processed *image2*s.
     3. Subwindow extraction
         On each *image3* the same subwindows are extracted giving the set
         of *image4*. This set contains nb_filter*nb_subwindow images
@@ -49,7 +49,7 @@ class ConvolutionalExtractor:
     - It is also possible to include the original image in the process
     """
 
-    def __init__(self, finiteFilter, convolver, multiSWExtractor, aggregator,
+    def __init__(self, finiteFilter, convolver, multiSWExtractor, multiPooler,
                  include_original_image=False):
         """
         Construct a :class:`ConvolutionalExtractor`
@@ -61,8 +61,10 @@ class ConvolutionalExtractor:
         convolver : :class:`Convolver`
             The convolver which will apply the filter. Must correspond with
             the filter generator and the image type
-        aggregator : :class:`Aggregator`
-            The aggregator which will aggregate after the filtering
+        pooler : :class:`MultiPooler`
+            The :class:`MultiPooler`which will carry the spatial poolings
+            **Note** : the spatial poolings must produce ouputs of the same
+            shape !
         include_original_image : boolean (default : False)
             Whether or not to include the original image for the subwindow
             extraction part
@@ -70,7 +72,7 @@ class ConvolutionalExtractor:
         self._finiteFilter = finiteFilter
         self._convolver = convolver
         self._swExtractor = multiSWExtractor
-        self._aggregator = aggregator
+        self._multiPooler = multiPooler
         self._include_image = include_original_image
 
     def extract(self, image):
@@ -99,17 +101,21 @@ class ConvolutionalExtractor:
 
         #Including the original image if desired
         if self._include_image:
-            filtered.append(self._aggregator(image))
+            pooledList = self._multiPooler.multipool(image)
+            for pooled in pooledList:
+                filtered.append(pooled)
         #Applying the filters & Aggregating
         for filt in self._finiteFilter:
             #Filtering
             npTmp = self._convolver(image, filt)
             #Aggregating
-            filtered.append(self._aggregator(npTmp))
+            pooledList = self._multiPooler.multipool(npTmp)
+            for pooled in pooledList:
+                filtered.append(pooled)
 
         #Refreshing the boxes
-        height, width, depth = filtered[0].shape
-        self._swExtractor.refresh(width, height)
+        shape = filtered[0].shape
+        self._swExtractor.refresh(shape[1], shape[0])  # width, height
 
         #Extracting the subwindows
         nbFilters = len(self._finiteFilter)

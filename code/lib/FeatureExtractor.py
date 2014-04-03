@@ -258,19 +258,44 @@ class ImageLinearizationExtractor(NumpyTransformer, Extractor):
             - 2D case
                 The array obtained by appending each row one after the other.
             - 3D case
-                Similar to the 2D case where each band is treated separatedly
-                and is appended in the same order as the 3rd dimension of the
-                input data
+                Similar to the 2D case where each pixel is treated separatedly
+                first.
+
+        Example
+        -------
+        >>> img = np.arange(27).reshape(3,3,3)
+        >>> img
+            array([[[ 0,  1,  2],
+            [ 3,  4,  5],
+            [ 6,  7,  8]],
+
+           [[ 9, 10, 11],
+            [12, 13, 14],
+            [15, 16, 17]],
+
+           [[18, 19, 20],
+            [21, 22, 23],
+            [24, 25, 26]]])
+        >>> extractor = ImageLinearizationExtractor()
+        >>> extractor.extract(img)
+            array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14,
+                   15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26])
         """
-        if len(img.shape) == 2:
-            #Grey level img
-            return self._lin(img)
-        else:
-            #RGB
-            lin = []
-            for depth in range(img.shape[2]):
-                lin.append(self._lin(img[:, :, depth]))
-            return np.hstack(lin)
+        shape = img.shape
+        size = 1
+        for dim in shape:
+            size *= dim
+        return img.reshape(size)
+#
+#        if len(img.shape) == 2:
+#            #Grey level img
+#            return self._lin(img)
+#        else:
+#            #RGB
+#            lin = []
+#            for depth in range(img.shape[2]):
+#                lin.append(self._lin(img[:, :, depth]))
+#            return np.hstack(lin)
 
 
 

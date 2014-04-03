@@ -166,20 +166,32 @@ class FiniteFilter:
     A :class:`FiniteFilter` is a container of filters.
     """
 
-    def __init__(self, filterGenerator, nbFilter):
+    def __init__(self, filterGenerator, nbFilter=None):
         """
         Construct a :class:`FiniteFilter`
 
         Parameters
         ----------
-        filterGenerator : :class:`FilterGenerator`
+        filterGenerator : :class:`FilterGenerator` or any container holding
+        filters and disposing of :meth:`next` method which produces a sequence
+        of filters or an iterable of filters
             The generator which will produce the filters
-        nbFilter : int > 0
-            The number of filters to generate
+        nbFilter : int > 0 or None (default : None)
+            The number of filters to generate. If None, all the filters of
+            `filterGenerator` are drawn.
         """
         filters = []
-        for i in xrange(nbFilter):
-            filters.append(filterGenerator.next())
+        if nbFilter is not None:
+            if hasattr(filterGenerator, "__getitem__"):
+                for i in xrange(nbFilter):
+                    filters.append(filterGenerator[i])
+            else:
+                for i in xrange(nbFilter):
+                    filters.append(filterGenerator.next())
+        else:
+            #Then we must iterate
+            for filt in filterGenerator:
+                filters.append(filt)
 
         self._filters = filters
 
@@ -198,21 +210,45 @@ class Finite3Filter(FiniteFilter):
 
     A :class:`Finite3Filter` is a container of filter triplets.
     """
-    def __init__(self, filterGenerator, nbFilter):
+    def __init__(self, filterGenerator, nbFilter=None):
         """
         Construct a :class:`Finite3Filter`
 
         Parameters
         ----------
-        filterGenerator : :class:`FilterGenerator`
+        filterGenerator : :class:`FilterGenerator` or any container holding
+        filters and disposing of :meth:`next` method which produces a sequence
+        of filters or an iterable of filters
             The generator which will produce the filters
-        nbFilter : int > 0
-            The number of filter triplets to generate
+        nbFilter : int > 0 or None (default : None)
+            The number of filters to generate. If None, all the filters of
+            `filterGenerator` are drawn.
         """
         filters = []
-        for i in xrange(nbFilter):
-            filters.append((filterGenerator.next(), filterGenerator.next(),
-                            filterGenerator.next()))
+        if nbFilter is not None:
+            if hasattr(filterGenerator, "__getitem__"):
+                for i in xrange(0, nbFilter, 3):
+                    f1 = filterGenerator[i]
+                    f2 = filterGenerator[i+1]
+                    f3 = filterGenerator[i+2]
+                    filters.append((f1, f2, f3))
+            else:
+                for i in xrange(nbFilter):
+                    filters.append(filterGenerator.next(),
+                                   filterGenerator.next(),
+                                   filterGenerator.next())
+        else:
+            #Then we must iterate
+            for filt in filterGenerator:
+                filters.append(filt)
+            filters2 = []
+            for i in xrange(0, len(filters), 3):
+                    f1 = filters[i]
+                    f2 = filters[i+1]
+                    f3 = filters[i+2]
+                    filters2.append((f1, f2, f3))
+            filters = filters2
+
         self._filters = filters
 
 
@@ -226,44 +262,38 @@ class Finite3SameFilter(Finite3Filter):
     each filter of a triplet are the same
     """
 
-    def __init__(self, filterGenerator, nbFilter):
+    def __init__(self, filterGenerator, nbFilter=None):
         """
         Construct a :class:`Finite3SameFilter`
 
         Parameters
         ----------
-        filterGenerator : :class:`FilterGenerator`
+        filterGenerator : :class:`FilterGenerator` or any container holding
+        filters and disposing of :meth:`next` method which produces a sequence
+        of filters or an iterable of filters
             The generator which will produce the filters
-        nbFilter : int > 0
-            The number of filter triplets to generate
+        nbFilter : int > 0 or None (default : None)
+            The number of filters to generate. If None, all the filters of
+            `filterGenerator` are drawn.
         """
         filters = []
-        for i in xrange(nbFilter):
-            filt = filterGenerator.next()
-            filters.append((filt, filt, filt))
+        if nbFilter is not None:
+            if hasattr(filterGenerator, "__getitem__"):
+                for i in xrange(nbFilter):
+                    filt = filterGenerator[i]
+                    filters.append((filt, filt, filt))
+            else:
+                for i in xrange(nbFilter):
+                    filt = filterGenerator.next()
+                    filters.append((filt, filt, filt))
+        else:
+            #Then we must iterate
+            for filt in filterGenerator:
+                filters.append((filt, filt, filt))
 
         self._filters = filters
 
 
-def meanFilter(width, height):
-    return np.ones((height, width))/(width*height)
-
-
-def sobelHzFilter():
-    return np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
-
-
-def sobelVFilter():
-    return np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
-
-
-def laplacianFilter():
-    return np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]])
-
-def gaussianFilter(width, height, stdev):
-    identity = np.zeros((height, width))
-    identity[height//2][width//2] = 1
-    return scFilters.gaussian_filter(identity, stdev)
 
 if __name__ == "__main__":
     test = False

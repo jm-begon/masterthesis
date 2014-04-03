@@ -6,15 +6,16 @@ An :class:`Aggregator` maps a 2D or 3D numpy array to a smaller one by
 applying a function on a contiguous bloc of pixels.
 This module contains several predefined Aggregators.
 """
-
 import numpy as np
 from math import ceil, floor
 
+from Pooler import Pooler
+
 __all__ = ["Aggregator", "FixSizeAggregator", "AverageAggregator",
-           "MaximumAggregator"]
+           "MaximumAggregator", "MinimumAggregator"]
 
 
-class Aggregator:
+class Aggregator(Pooler):
     """
     ==========
     Aggregator
@@ -209,6 +210,12 @@ class Aggregator:
         """
         return self.aggregate(npArray)
 
+    def pool(self, npArray):
+        """
+        Delegate to :meth:`aggregate`
+        """
+        return self.aggregate(npArray)
+
 
 class FixSizeAggregator(Aggregator):
     """
@@ -382,3 +389,43 @@ class MaximumAggregator(FixSizeAggregator):
 
     def _max(self, x):
         return x.max()
+
+
+class MinimumAggregator(FixSizeAggregator):
+    """
+    =================
+    MinimumAggregator
+    =================
+    A :class:`MinimumAggregator` computes the minimum of the neighborhood
+
+    See also :class:`Aggregator`, :class:`FixSizeAggregator`
+    """
+
+    def __init__(self, neighborhood_width, neighborhood_height, np_width,
+                 np_height, include_offset=False):
+        """
+        Construct a :class:`MinimumAggregator`
+
+         Parameters
+        -----------
+        neighborhood_width : int
+            The neighborhood window width
+        neighborhood_height : int
+            The neighborhood window height
+        np_width : int
+            The width of the array this :class:`Aggregator` will treat
+        np_height : int
+            The height of the array this :class:`Aggregator` will treat
+        include_offset: boolean
+            Whether to include the offset or treat it separately. The offset
+            is the remaining part of the division of the array size by
+            neigborhood window size.
+                if True, the last neighborhood windows are enlarge to treat
+                the offset
+                if False, the offset is treated separately
+        """
+        self._init2(self._min, neighborhood_width, neighborhood_height,
+                    include_offset, np_width, np_height)
+
+    def _min(self, x):
+        return x.min()

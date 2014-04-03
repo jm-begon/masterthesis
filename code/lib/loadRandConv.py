@@ -11,7 +11,7 @@ import cPickle as pickle
 
 from sklearn.ensemble import ExtraTreesClassifier
 
-from CoordinatorFactory import coordinatorRandConvFactory
+from CoordinatorFactory import Const, coordinatorRandConvFactory
 from Classifier import Classifier
 from SubWindowExtractor import SubWindowExtractor
 from FilterGenerator import FilterGenerator
@@ -52,8 +52,7 @@ filterMaxSize = 32
 filterNormalisation = FilterGenerator.NORMALISATION_MEANVAR
 
 #Aggregation
-aggregatorNeighborhoodWidth = 2
-aggregatorNeighbordhoodHeight = 2
+poolings = [(2, 2, Const.POOLING_AGGREG_AVG)]
 
 #Subwindow
 nbSubwindows = 10
@@ -92,8 +91,7 @@ def run(lsFile, tsFile, **kwargs):
         subwindowMaxSizeRatio=subwindowMaxSizeRatio,
         subwindowTargetWidth=subwindowTargetWidth,
         subwindowTargetHeight=subwindowTargetHeight,
-        aggregatorNeighborhoodWidth=aggregatorNeighborhoodWidth,
-        aggregatorNeighbordhoodHeight=aggregatorNeighbordhoodHeight,
+        poolings=poolings,
         filterNormalisation=filterNormalisation,
         subwindowInterpolation=subwindowInterpolation,
         includeOriginalImage=includeOriginalImage,
