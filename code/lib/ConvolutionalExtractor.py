@@ -120,9 +120,10 @@ class ConvolutionalExtractor:
         #Extracting the subwindows
         nbFilters = len(self._finiteFilter)
         nbSubWindow = len(self._swExtractor)
-        nbImageFactor = nbFilters
+        nbPoolers = len(self._multiPooler)
+        nbImageFactor = nbFilters*nbPoolers
         if self._include_image:
-            nbImageFactor += 1
+            nbImageFactor += nbPoolers
 
         allSubWindows = [[0] * nbImageFactor for i in xrange(nbSubWindow)]
 
