@@ -148,6 +148,15 @@ class ConvolutionalExtractor:
         """
         return self._finiteFilter
 
+    def getPoolers(self):
+        """
+        Return
+        ------
+        multiPooler : class:`MultiPooler`
+            The poolers
+        """
+        return self._multiPooler
+
     def isImageIncluded(self):
         """
         Whether the raw image was included

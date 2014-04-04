@@ -41,7 +41,7 @@ class Aggregator(Pooler):
         Parameters
         ----------
         aggregating_function : callable
-            A function which maps a 2D (numpy) array
+            A function which maps a 2D (numpy) array into a single value
         neighborhood_width : int
             The neighborhood window width
         neighborhood_height : int

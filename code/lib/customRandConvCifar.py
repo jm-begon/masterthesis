@@ -21,7 +21,16 @@ from ImageBuffer import FileImageBuffer, NumpyImageLoader
 #======HYPER PARAMETERS======#
 #----RandConv param
 #Aggregation
-poolings = [(2, 2, Const.POOLING_NONE)]
+poolings = [(2, 2, Const.POOLING_NONE),
+            (3, 3, Const.POOLING_CONV_MIN),
+            (3, 3, Const.POOLING_CONV_AVG),
+            (3, 3, Const.POOLING_CONV_MAX),
+            (5, 5, Const.POOLING_CONV_MIN),
+            (5, 5, Const.POOLING_CONV_AVG),
+            (5, 5, Const.POOLING_CONV_MAX),
+            (7, 7, Const.POOLING_CONV_MIN),
+            (7, 7, Const.POOLING_CONV_AVG),
+            (7, 7, Const.POOLING_CONV_MAX)]
 
 #Subwindow
 nbSubwindows = 10

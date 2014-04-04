@@ -194,4 +194,5 @@ def customFinite3sameFilter():
 
 
 if __name__ == "__main__":
-    pass
+    cuFilt = customFinite3sameFilter()
+    print len(cuFilt)

@@ -10,7 +10,6 @@ A filter is 2D numpy array which can be used to filter an image with a
 convolution operator
 """
 import numpy as np
-import scipy.ndimage.filters as scFilters
 
 __all__ = ["FilterGenerator", "FixSizeFilterGenerator", "FiniteFilter",
            "Finite3Filter", "Finite3SameFilter"]

@@ -23,8 +23,8 @@ from Logger import StandardLogger, ProgressLogger
 from Compressor import SamplerFactory, PCAFactory
 
 
-__all__ = ["Const", "coordinatorRandConvFactory", "coordinatorPixitFactory",
-           "coordinatorCompressRandConvFactory"]
+__all__ = ["Const", "coordinatorRandConvFactory", "customRandConvFactory",
+           "coordinatorPixitFactory", "coordinatorCompressRandConvFactory"]
 
 
 class Const:

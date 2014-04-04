@@ -61,11 +61,11 @@ verbose = 8
 maxLearningSize = 50000
 maxTestingSize = 10000
 
-learningUse = 100
+learningUse = 50000
 learningSetDir = "learn/"
 learningIndexFile = "0index"
 
-testingUse = 100
+testingUse = 10000
 testingSetDir = "test/"
 testingIndexFile = "0index"
 
@@ -222,7 +222,7 @@ def run(nb_filters=nb_filters,
     return accuracy, confMat, importance, order
 
 if __name__ == "__main__":
-    acc, confMat, importance, order = run(nb_filters=10)
+    acc, confMat, importance, order = run()
 
     print "Confusion matrix :\n", confMat
     print "Feature importance :\n", importance
