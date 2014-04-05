@@ -11,7 +11,7 @@ from time import time
 
 from sklearn.ensemble import ExtraTreesClassifier
 
-from CoordinatorFactory import Const, coordinatorRandConvFactory
+from CoordinatorFactory import Const, customRandConvFactory
 from Classifier import Classifier
 from SubWindowExtractor import SubWindowExtractor
 from CifarLoader import CifarFromNumpies
@@ -110,7 +110,7 @@ def run(poolings=poolings,
     #======INSTANTIATING========#
     os.environ["JOBLIB_TEMP_FOLDER"] = "/home/jmbegon/jmbegon/code/work/tmp/"
     #--Pixit--
-    randConvCoord = coordinatorRandConvFactory(
+    randConvCoord = customRandConvFactory(
         nbSubwindows=nbSubwindows,
         subwindowMinSizeRatio=subwindowMinSizeRatio,
         subwindowMaxSizeRatio=subwindowMaxSizeRatio,
