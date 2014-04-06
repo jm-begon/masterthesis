@@ -109,7 +109,7 @@ def run(poolings=poolings,
 
     #======INSTANTIATING========#
     os.environ["JOBLIB_TEMP_FOLDER"] = "/home/jmbegon/jmbegon/code/work/tmp/"
-    #--Pixit--
+    #--customRandConv--
     randConvCoord = customRandConvFactory(
         nbSubwindows=nbSubwindows,
         subwindowMinSizeRatio=subwindowMinSizeRatio,
@@ -167,7 +167,7 @@ def run(poolings=poolings,
     #====ANALYSIS=====#
     importance, order = randConvCoord.importancePerFeatureGrp(baseClassif)
 
-    print "========================================="
+    print "==================CUSTOM======================="
     print "----------Pooling--------------"
     print "poolings", poolings
     print "--------SW extractor----------"

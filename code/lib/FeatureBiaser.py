@@ -148,6 +148,7 @@ class FeatureBiaser:
         self.dtype = npArray2D.dtype
         self.itemsize = npArray2D.itemsize
         height, width = npArray2D.shape[0], npArray2D.shape[1]
+
         #Constructing the inverse look up table (from data to this instance)
         lutInv = [1]*width
 
@@ -167,7 +168,7 @@ class FeatureBiaser:
 
     def pack(self):
         ls = list(self._data.shape)
-        ls[0] = len(self._lut)
+        ls[1] = len(self._lut)
         self.shape = tuple(ls)
         self.size = np.prod(self.shape)
 
@@ -199,7 +200,7 @@ class FeatureBiaser:
         rep = []
         for row in xrange(self.shape[0]):
             for col in xrange(self.shape[1]):
-                rep.append(str(self.get(row, col)))
+                rep.append(str(self.getElement(row, col)))
                 rep.append("\t")
             rep.append("\n")
         return "".join(rep[:-1])
@@ -236,20 +237,34 @@ class FeatureBiaser:
                 clone.pack()
                 return clone
 
+    def asContiguousArray(self):
+        tmp = np.zeros(self.shape)
+        height, width = self.shape
+        for row in xrange(height):
+            for col in xrange(width):
+                tmp[row][col] = self.getElement(row, col)
+        return tmp
+
 
 if __name__ == "__main__":
     from sklearn.ensemble import ExtraTreesClassifier
     classif = ExtraTreesClassifier()
 
-    nbObj = 100
+    nbObj = 10
     nbFeat = 7
     nbClass = 4
     Xl = np.random.rand(nbObj, nbFeat)
     yl = np.random.randint(0, nbClass-1, nbObj)
 
     Xlv = FeatureBiaser(Xl, [(0, 3), (1, 3)])
+    Xlv = Xlv.asContiguousArray()
+    print Xl.shape, Xlv.shape
+
     classif.fit(Xlv, yl)
 
     Xt = np.random.rand(nbObj, nbFeat)
+    Xtv = FeatureBiaser(Xt, [(0, 3), (1, 3)])
+    Xtv = Xtv.asContiguousArray()
+    print Xt.shape, Xtv.shape
 
-    classif.predict(Xt)
+    classif.predict(Xtv)
