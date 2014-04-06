@@ -351,7 +351,7 @@ class RandConvCoordinator(Coordinator):
         """
         nbGroups = len(self.getFilters())*len(self._convolExtractor.getPoolers())
         if self.isImageIncluded():
-            nbGroups += 1
+            nbGroups += len(self._convolExtractor.getPoolers())
         nbFeaturePerGroup = nbFeatures // nbGroups
         return nbFeatures, nbGroups, nbFeaturePerGroup
 
