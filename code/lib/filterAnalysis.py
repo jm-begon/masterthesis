@@ -88,7 +88,7 @@ if __name__ == "__main__":
     filterMaxSize = 32
     nbFilters = 100
     nbMainFilters = 10
-    printFilter = 0
+    printFilter = 2
     filterNormalisation = FilterGenerator.NORMALISATION_MEANVAR
 
     #CONVOLUTIONAL EXTRACTOR
@@ -135,7 +135,7 @@ if __name__ == "__main__":
 
     ni = 1./9
 #    mainFilters[printFilter] = np.array([[ni, ni, ni], [ni, ni, ni], [ni, ni, ni]])
-
+    print "=============="
     print mainFilters[printFilter]
     lena = getLena()
     lenaFiltered = applyFilter(lena, mainFilters[printFilter])
