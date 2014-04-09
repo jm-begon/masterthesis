@@ -22,8 +22,8 @@ from ImageBuffer import FileImageBuffer, NumpyImageLoader
 #----RandConv param
 #Filtering
 nb_filters = 100
-filter_min_val = -1
-filter_max_val = 1
+filterGenConfiguration = (Const.GEN_REAL, (-1, 1))
+#filterGenConfiguration = (Const.GEN_REAL, [(-1, 0.3), (0, 0.4), (1, 0.3)])
 filterMinSize = 2
 filterMaxSize = 32
 filterNormalisation = FilterGenerator.NORMALISATION_MEANVAR
@@ -61,18 +61,17 @@ verbose = 8
 maxLearningSize = 50000
 maxTestingSize = 10000
 
-learningUse = 50000
+learningUse = 50
 learningSetDir = "learn/"
 learningIndexFile = "0index"
 
-testingUse = 10000
+testingUse = 10
 testingSetDir = "test/"
 testingIndexFile = "0index"
 
 
 def run(nb_filters=nb_filters,
-        filter_min_val=filter_min_val,
-        filter_max_val=filter_max_val,
+        filterGenConfiguration=filterGenConfiguration,
         filterMinSize=filterMinSize,
         filterMaxSize=filterMaxSize,
         filterNormalisation=filterNormalisation,
@@ -117,8 +116,7 @@ def run(nb_filters=nb_filters,
     #--Pixit--
     randConvCoord = coordinatorRandConvFactory(
         nbFilters=nb_filters,
-        filterMinVal=filter_min_val,
-        filterMaxVal=filter_max_val,
+        filterGenConfiguration=filterGenConfiguration,
         filterMinSize=filterMinSize,
         filterMaxSize=filterMaxSize,
         nbSubwindows=nbSubwindows,
@@ -181,8 +179,7 @@ def run(nb_filters=nb_filters,
     print "========================================="
     print "-----------Filtering--------------"
     print "nb_filters", nb_filters
-    print "filter_min_val", filter_min_val
-    print "filter_max_val", filter_max_val
+    print "filterGenConfiguration", filterGenConfiguration
     print "filterMinSize", filterMinSize
     print "filterMaxSize", filterMaxSize
     print "filterNormalisation", filterNormalisation

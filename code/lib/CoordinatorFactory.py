@@ -11,7 +11,8 @@ from FilterHolder import customFinite3sameFilter
 from Convolver import RGBConvolver
 from SubWindowExtractor import (MultiSWExtractor, SubWindowExtractor,
                                 FixTargetSWExtractor)
-from NumberGenerator import OddUniformGenerator, NumberGenerator
+from NumberGenerator import (OddUniformGenerator, NumberGenerator,
+                             CustomDiscreteNumberGenerator)
 from FeatureExtractor import ImageLinearizationExtractor
 from Pooler import (IdentityPooler, MultiPooler, ConvMinPooler,
                     ConvAvgPooler, ConvMaxPooler)
@@ -28,6 +29,9 @@ __all__ = ["Const", "coordinatorRandConvFactory", "customRandConvFactory",
 
 
 class Const:
+    GEN_REAL = -1
+    GEN_SET = -2
+
     POOLING_NONE = 0
     POOLING_AGGREG_MIN = 1
     POOLING_AGGREG_AVG = 2
@@ -137,7 +141,7 @@ def coordinatorPixitFactory(
 
 def coordinatorRandConvFactory(
         nbFilters=5,
-        filterMinVal=-1, filterMaxVal=1,
+        filterGenConfiguration=(Const.GEN_REAL, (-1, 1)),
         filterMinSize=1, filterMaxSize=17,
         filterNormalisation=FilterGenerator.NORMALISATION_MEANVAR,
         poolings=[(3, 3, Const.POOLING_AGGREG_AVG)],
@@ -155,10 +159,30 @@ def coordinatorRandConvFactory(
     ----------
     nbFilters : int >= 0 (default : 5)
         The number of filter
-    filterMinVal : float (default : -1)
-        The minimum value of a filter component
-    filterMaxVal : float : filterMinVal <= filterMaxVal (default : 1)
-        The maximum value of a filter component
+    filterGenConfiguration : pair (policy, parameters)
+        The value filter generation parameters
+        policy : int in {Const.GEN_REAL, Const.GEN_SET}
+            The filter value generation policy.
+            - Const.GEN_REAL (default):
+                generate real number between two bounds. The parameters must
+                specify theses bounds :
+                parameters : pairs (filterMinVal, filterMaxVal)
+                    filterMinVal : float (default : -1)
+                        The minimum value of a filter component
+                    filterMaxVal : float : filterMinVal <= filterMaxVal
+                    (default : 1)
+                        The maximum value of a filter component
+            - Const.GEN_SET :
+                generate number from a predefine set with a given probability
+                parameters : iterable of pairs (number, probability)
+                    number : number
+                        an element of the set from which to draw
+                    probability : float
+                        the probability of the element being chosen at each
+                        draw
+        seed : int or None (default : None)
+            if seed is int : initiate the random generator with this seed
+
     filterMinSize : int >= 0 : odd number (default : 1)
         The minimum size of a filter
     filterMaxSize : int >= 0 : odd number s.t.  filterMinSize <= filterMaxSize
@@ -245,8 +269,16 @@ def coordinatorRandConvFactory(
 
     #CONVOLUTIONAL EXTRACTOR
     #Filter generator
-    filterValGenerator = NumberGenerator(filterMinVal, filterMaxVal,
-                                         seed=filtValGenSeed)
+    #--Value
+    filterGenPolicy, filterGenParam = filterGenConfiguration
+    if filterGenPolicy == Const.GEN_REAL:
+        filterMinVal, filterMaxVal = filterGenParam
+        filterValGenerator = NumberGenerator(filterMinVal, filterMaxVal,
+                                             seed=filtValGenSeed)
+    if filterGenPolicy == Const.GEN_SET:
+        filterValGenerator = CustomDiscreteNumberGenerator(filterGenParam,
+                                                           seed=filtValGenSeed)
+    #--Size
     filterSizeGenerator = OddUniformGenerator(filterMinSize, filterMaxSize,
                                               seed=filtSizeGenSeed)
     baseFilterGenerator = FilterGenerator(filterValGenerator,
