@@ -23,7 +23,7 @@ from ImageBuffer import FileImageBuffer, NumpyImageLoader
 #Filtering
 nb_filters = 100
 filterGenConfiguration = (Const.GEN_REAL, (-1, 1))
-#filterGenConfiguration = (Const.GEN_REAL, [(-1, 0.3), (0, 0.4), (1, 0.3)])
+#filterGenConfiguration = (Const.GEN_SET, [(-1, 0.3), (0, 0.4), (1, 0.3)])
 filterMinSize = 2
 filterMaxSize = 32
 filterNormalisation = FilterGenerator.NORMALISATION_MEANVAR
