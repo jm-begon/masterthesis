@@ -15,20 +15,16 @@ from Classifier import Classifier
 from CifarLoader import CifarFromNumpies
 from ImageBuffer import FileImageBuffer, NumpyImageLoader
 from Coordinator import Coordinator
-from Logger import StandardLogger, ProgressLogger
-from NumpyFactory import NumpyFactory
 
 
 class MemroyTestCoordinator(Coordinator):
-    def __init__(self, nbFeatures, nbObjects, logger, verbosity):
-        Coordinator.__init__(self, logger, verbosity)
+    def __init__(self, nbFeatures, nbObjects):
         self._nbFeatures = nbFeatures
         self._nbObj = nbObjects
-        self._factory = NumpyFactory()
 
     def _onProcess(self, imageBuffer=None, learningPhase=None):
-        X = self._factory.createArray((self._nbObj, self._nbFeatures))
-        y = self._factory.createArray((self._nbObj))
+        X = np.zeros((self._Obj, self._nbFeatures))
+        y = [0]*self._nbObj
         return X, y
 
 
@@ -106,9 +102,7 @@ def run(nb_filters=nb_filters,
     #======INSTANTIATING========#
     os.environ["JOBLIB_TEMP_FOLDER"] = "/home/jmbegon/jmbegon/code/work/tmp/"
     #--Pixit--
-    logger = ProgressLogger(StandardLogger(autoFlush=True,
-                                           verbosity=verbosity))
-    memCoord = MemroyTestCoordinator(nbFeatures, totalNbObj, logger, verbosity)
+    memCoord = MemroyTestCoordinator(nbFeatures, totalNbObj)
     if nbJobs != 1:
         memCoord.parallelize(nbJobs, tempFolder)
 

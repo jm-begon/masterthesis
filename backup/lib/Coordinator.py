@@ -12,7 +12,6 @@ import numpy as np
 from Logger import Progressable
 from TaskManager import SerialExecutor, ParallelExecutor
 from NumpyToPILConvertor import NumpyPILConvertor
-from NumpyFactory import NumpyFactory
 
 __all__ = ["PixitCoordinator", "RandConvCoordinator",
            "CompressRandConvCoordinator", "LoadCoordinator"]
@@ -38,7 +37,6 @@ class Coordinator(Progressable):
     def __init__(self, logger=None, verbosity=None):
         Progressable.__init__(self, logger, verbosity)
         self._exec = SerialExecutor(logger, verbosity)
-        self._npCreator = NumpyFactory()
 
     def parallelize(self, nbJobs=-1, tempFolder=None):
         """
@@ -91,14 +89,6 @@ class Coordinator(Progressable):
         implementation of what is to be done is the responbility of the method
         :meth:`_onProcess`. It is this method that should be overloaded
         """
-        self._nbColors = imageBuffer.nbBands()
-#
-#        nbFeatures = self.nbFeaturesPerObject(nbColors)
-#        nbObjs = self.nbObjects(imageBuffer)
-#
-#        X = np.zeros((nbObjs, nbFeatures))
-#        y = np.zeros((nbObjs))
-#
         ls = self._exec("Extracting features", self._onProcess, imageBuffer,
                         learningPhase=learningPhase)
 
@@ -110,7 +100,7 @@ class Coordinator(Progressable):
         return X, y
 
     @abstractmethod
-    def _onProcess(self, imageBuffer, subsection, learningPhase, X, y):
+    def _onProcess(self, imageBuffer, learningPhase):
         """
         Extracts the feature vectors for the images contained in the
         :class:`ImageBuffer`
@@ -145,21 +135,6 @@ class Coordinator(Progressable):
     def __call__(self, imageBuffer, learningPhase):
         """Delegate to :meth:`process`"""
         return self.process(imageBuffer, learningPhase)
-
-    @abstractmethod
-    def nbFeaturesPerObject(self, nbColors=1):
-        """
-        Return the number of features that this :class:`Coordinator` will
-        produce per object
-        """
-        pass
-
-    def nbObjects(self, imageBuffer):
-        """
-        Return the number of objects that this :class:`Coordinator` will
-        produce
-        """
-        return len(imageBuffer)
 
     def getLogger(self):
         """
@@ -234,41 +209,27 @@ class PixitCoordinator(Coordinator):
 
     def _onProcess(self, imageBuffer, learningPhase):
         """Overload"""
-        nbFeatures = self.nbFeaturesPerObject(self._nbColors)
-        nbObjs = self.nbObjects(imageBuffer)
-        X = self._npCreator.createArray((nbObjs, nbFeatures))
-        y = self._npCreator.createArray((nbObjs))
-
+        ls = []
+        y = []
         convertor = NumpyPILConvertor()
 
         #Logging
         counter = 0
-        index = 0
         self.setTask(len(imageBuffer),
                      "PixitCoordinator loop for each image")
         for image, label in imageBuffer:
             image = convertor.numpyToPIL(image)
             imgLs = self._multiSWExtractor.extract(image)
-            #Filling the X and y
-            for i, img in enumerate(imgLs):
-                X[index] = self._featureExtractor.extract(
-                    convertor.pILToNumpy(img))
-                y[index] = label
-                index += 1
+            for img in imgLs:
+                ls.append(
+                    self._featureExtractor.extract(convertor.pILToNumpy(img)))
+            y = y + [label] * len(imgLs)
             #Logging progress
             self.updateTaskProgress(counter)
             counter += 1
+        X = np.vstack((ls))
 
         return X, y
-
-    def nbFeaturesPerObject(self, nbColors):
-        height, width = self._multiSWExtractor.getFinalSize()
-        return self._featureExtractor.nbFeaturesPerObject(height,
-                                                          width,
-                                                          nbColors)
-
-    def nbObjects(self, imageBuffer):
-        return len(imageBuffer)*self._multiSWExtractor.nbSubwidows()
 
 
 class RandConvCoordinator(Coordinator):
@@ -312,14 +273,11 @@ class RandConvCoordinator(Coordinator):
 
     def _onProcess(self, imageBuffer, learningPhase):
         """Overload"""
-        nbFeatures = self.nbFeaturesPerObject(self._nbColors)
-        nbObjs = self.nbObjects(imageBuffer)
-        X = self._npCreator.createArray((nbObjs, nbFeatures))
-        y = self._npCreator.createArray((nbObjs))
+        ls = []
+        y = []
 
         #Logging
         counter = 0
-        row = 0
         self.setTask(len(imageBuffer),
                      "RandConvCoordinator loop for each image")
 
@@ -329,22 +287,22 @@ class RandConvCoordinator(Coordinator):
 
             #Accessing each subwindow sets separately
             for filteredList in allSubWindows:
-                column = 0
+                filtersBySW = []
                 #Accessing each filter separately for a given subwindow
                 for filtered in filteredList:
                     #Extracting the features for each filter
-                    filter_feature = self._featureExtractor.extract(filtered)
-                    for val in filter_feature:
-                        X[row, column] = val
-                        column += 1
+                    filtersBySW.append(self._featureExtractor.extract(filtered))
+                #Combining all the filter_feature for a given subwindow
+                ls.append(np.hstack(filtersBySW))
 
-                #Corresponding label
-                y[row] = label
-                row += 1
+            #Extending the labels for each subwindow
+            y = y + [label]*len(allSubWindows)
 
             #Logging progress
             self.updateTaskProgress(counter)
             counter += 1
+        #Combining the information for all the images
+        X = np.vstack((ls))
 
         return X, y
 
@@ -450,25 +408,6 @@ class RandConvCoordinator(Coordinator):
             impPerGroup.append(sum(importance[starts[i]:starts[i+1]]))
 
         return impPerGroup, np.argsort(impPerGroup)[::-1]
-
-    def nbFeaturesPerObject(self, nbColors):
-        # Number of filters * poolers
-        nbGroups = len(self.getFilters())*len(self._convolExtractor.getPoolers())
-        if self.isImageIncluded():
-            nbGroups += len(self._convolExtractor.getPoolers())
-
-        #Size of the extracted subwindows
-        height, width = self._convolExtractor.getFinalSizePerSubwindow()
-
-        #Number of features per individual subwindows
-        nbFperGroup = self._featureExtractor.nbFeaturesPerObject(height,
-                                                                 width,
-                                                                 nbColors)
-        #Total number of features
-        return nbGroups*nbFperGroup
-
-    def nbObjects(self, imageBuffer):
-        return len(imageBuffer)*self._convolExtractor.getNbSubwindows()
 
 
 class CompressRandConvCoordinator(RandConvCoordinator):

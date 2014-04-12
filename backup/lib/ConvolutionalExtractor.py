@@ -169,15 +169,6 @@ class ConvolutionalExtractor:
         """
         return self._include_image
 
-    def getNbSubwindows(self):
-        """
-        Return the number of subwindows extracted
-        """
-        return self._swExtractor.nbSubwidows()
-
-    def getFinalSizePerSubwindow(self):
-        return self._swExtractor.getFinalSize()
-
 if __name__ == "__main__":
     test = True
     if test:

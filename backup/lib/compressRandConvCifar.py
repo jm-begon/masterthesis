@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # Author : Jean-Michel Begon
-# Date : Mar 10 2014
+# Date : Mar 28 2014
 """
-A script to run the random and convolution classifcation
+A script to run the compressed random and convolution classifcation
 """
 import sys
 import os
@@ -10,7 +10,7 @@ from time import time
 
 from sklearn.ensemble import ExtraTreesClassifier
 
-from CoordinatorFactory import Const, coordinatorRandConvFactory
+from CoordinatorFactory import Const, coordinatorCompressRandConvFactory
 from Classifier import Classifier
 from SubWindowExtractor import SubWindowExtractor
 from FilterGenerator import FilterGenerator
@@ -18,104 +18,70 @@ from CifarLoader import CifarFromNumpies
 from ImageBuffer import FileImageBuffer, NumpyImageLoader
 
 
-#======HYPER PARAMETERS======#
-#----RandConv param
-#Filtering
-nb_filters = 100
-filter_min_val = -1
-filter_max_val = 1
-filterMinSize = 2
-filterMaxSize = 32
-filterNormalisation = FilterGenerator.NORMALISATION_MEANVAR
+def run():
 
-#Aggregation
-poolings = [(2, 2, Const.POOLING_AGGREG_AVG)]
+    #======HYPER PARAMETERS======#
+    #----RandConv param
+    #Filtering
+    nb_filters = 100
+    filter_min_val = -1
+    filter_max_val = 1
+    filterMinSize = 2
+    filterMaxSize = 32
+    filterNormalisation = FilterGenerator.NORMALISATION_MEANVAR
 
-#Subwindow
-nbSubwindows = 10
-subwindowMinSizeRatio = 0.75
-subwindowMaxSizeRatio = 1.
-subwindowTargetWidth = 16
-subwindowTargetHeight = 16
-fixedSize = False
-subwindowInterpolation = SubWindowExtractor.INTERPOLATION_BILINEAR
+    #Aggregation
+    poolings = [(2, 2, Const.POOLING_AGGREG_AVG)]
 
-#Misc.
-includeOriginalImage = True
-random = False
-nbJobs = -1
-verbosity = 50
-tempFolder = "tmp/"
+    #Subwindow
+    nbSubwindows = 10
+    subwindowMinSizeRatio = 0.75
+    subwindowMaxSizeRatio = 1.
+    subwindowTargetWidth = 16
+    subwindowTargetHeight = 16
+    fixedSize = False
+    subwindowInterpolation = SubWindowExtractor.INTERPOLATION_BILINEAR
 
-#-----Extratree param
-nbTrees = 30
-maxFeatures = "auto"
-maxDepth = None
-minSamplesSplit = 2
-minSamplesLeaf = 1
-bootstrap = False
-nbJobsEstimator = -1
-verbose = 50
+    #Misc.
+    includeOriginalImage = True
 
-#=====DATA=====#
-maxLearningSize = 50000
-maxTestingSize = 10000
+    #Compressor
+    compressorType = "Sampling"
+    nbCompressedFeatures = 20
+    compressOriginalImage = True
 
-learningUse = 500
-learningSetDir = "learn/"
-learningIndexFile = "0index"
+    #Parrallelization & Logger
+    nbJobs = -1
+    verbosity = 8
+    tempFolder = "tmp/"
 
-testingUse = 500
-testingSetDir = "test/"
-testingIndexFile = "0index"
-
-
-def run(nb_filters=nb_filters,
-        filter_min_val=filter_min_val,
-        filter_max_val=filter_max_val,
-        filterMinSize=filterMinSize,
-        filterMaxSize=filterMaxSize,
-        filterNormalisation=filterNormalisation,
-        poolings=poolings,
-        nbSubwindows=nbSubwindows,
-        subwindowMinSizeRatio=subwindowMinSizeRatio,
-        subwindowMaxSizeRatio=subwindowMaxSizeRatio,
-        subwindowTargetWidth=subwindowTargetWidth,
-        subwindowTargetHeight=subwindowTargetHeight,
-        fixedSize=fixedSize,
-        subwindowInterpolation=subwindowInterpolation,
-        includeOriginalImage=includeOriginalImage,
-        random=random,
-        nbJobs=nbJobs,
-        verbosity=verbosity,
-        tempFolder=tempFolder,
-        nbTrees=nbTrees,
-        maxFeatures=maxFeatures,
-        maxDepth=maxDepth,
-        minSamplesSplit=minSamplesSplit,
-        minSamplesLeaf=minSamplesLeaf,
-        bootstrap=bootstrap,
-        nbJobsEstimator=nbJobsEstimator,
-        verbose=verbose,
-        learningUse=learningUse,
-        testingUse=testingUse):
-
+    #-----Extratree param
+    nbTrees = 30
+    maxFeatures = "auto"
+    maxDepth = None
+    minSamplesSplit = 2
+    minSamplesLeaf = 1
+    bootstrap = False
+    nbJobsEstimator = -1
     randomState = None
-    if random:
-        randomState = 100
+    verbose = 8
 
-    lsSize = learningUse
-    if learningUse > maxLearningSize:
-        lsSize = maxLearningSize
+    #=====DATA=====#
+#    maxLearningSize = 50000
+#    maxTestingSize = 10000
 
-    tsSize = testingUse
-    if testingUse > maxTestingSize:
-        tsSize = maxTestingSize
+    learningUse = 500
+    learningSetDir = "learn/"
+    learningIndexFile = "0index"
+
+    testingUse = 500
+    testingSetDir = "test/"
+    testingIndexFile = "0index"
 
     #======INSTANTIATING========#
     os.environ["JOBLIB_TEMP_FOLDER"] = "/home/jmbegon/jmbegon/code/work/tmp/"
     #--Pixit--
-    randConvCoord = coordinatorRandConvFactory(
+    randConvCoord = coordinatorCompressRandConvFactory(
         nbFilters=nb_filters,
         filterMinVal=filter_min_val,
         filterMaxVal=filter_max_val,
@@ -130,10 +96,12 @@ def run(nb_filters=nb_filters,
         filterNormalisation=filterNormalisation,
         subwindowInterpolation=subwindowInterpolation,
         includeOriginalImage=includeOriginalImage,
+        compressorType=compressorType,
+        nbCompressedFeatures=nbCompressedFeatures,
+        compressOriginalImage=compressOriginalImage,
         nbJobs=nbJobs,
         verbosity=verbosity,
-        tempFolder=tempFolder,
-        random=random)
+        tempFolder=tempFolder)
 
     #--Extra-tree--
     baseClassif = ExtraTreesClassifier(nbTrees,
@@ -152,11 +120,11 @@ def run(nb_filters=nb_filters,
     #--Data--
     loader = CifarFromNumpies(learningSetDir, learningIndexFile)
     learningSet = FileImageBuffer(loader.getFiles(), NumpyImageLoader())
-    learningSet = learningSet[0:lsSize]
+    learningSet = learningSet[0:learningUse]
 
     loader = CifarFromNumpies(testingSetDir, testingIndexFile)
     testingSet = FileImageBuffer(loader.getFiles(), NumpyImageLoader())
-    testingSet = testingSet[0:tsSize]
+    testingSet = testingSet[0:testingUse]
 
     #=====COMPUTATION=====#
     #--Learning--#
@@ -197,9 +165,9 @@ def run(nb_filters=nb_filters,
     print "fixedSize", fixedSize
     print "------------Misc-----------------"
     print "includeOriginalImage", includeOriginalImage
-    print "random", random
-    print "tempFolder", tempFolder
-    print "verbosity", verbosity
+    print "compressorType", compressorType
+    print "nbCompressedFeatures", nbCompressedFeatures
+    print "compressOriginalImage",  compressOriginalImage
     print "nbJobs", nbJobs
     print "--------ExtraTrees----------"
     print "nbTrees", nbTrees
@@ -209,7 +177,6 @@ def run(nb_filters=nb_filters,
     print "minSamplesLeaf", minSamplesLeaf
     print "bootstrap", bootstrap
     print "nbJobsEstimator", nbJobsEstimator
-    print "verbose", verbose
     print "randomState", randomState
     print "------------Data---------------"
     print "LearningSet size", len(learningSet)
@@ -218,12 +185,12 @@ def run(nb_filters=nb_filters,
     print "Fit time", (fitEnd-fitStart), "seconds"
     print "Classifcation time", (predEnd-predStart), "seconds"
     print "Accuracy", accuracy
+    print "Confusion matrix :\n", confMat
 
     return accuracy, confMat, importance, order
 
 if __name__ == "__main__":
     acc, confMat, importance, order = run()
 
-    print "Confusion matrix :\n", confMat
     print "Feature importance :\n", importance
     print "Feature importance order :\n", order

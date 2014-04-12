@@ -297,21 +297,7 @@ class ImageLinearizationExtractor(NumpyTransformer, Extractor):
 #                lin.append(self._lin(img[:, :, depth]))
 #            return np.hstack(lin)
 
-    def nbFeaturesPerObject(self, height, width, depth):
-        """
-        Return the number of features that this :class:`Coordinator` will
-        produce per object
 
-        Parameters
-        ----------
-        height : int > 0
-            The height of the image
-        width : int > 0
-            The width of the image
-        depth : int >= 1
-            The number of colors
-        """
-        return height*width*depth
 
 if __name__ == "__main__":
     test=True

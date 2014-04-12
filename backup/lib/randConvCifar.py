@@ -1,47 +1,50 @@
 # -*- coding: utf-8 -*-
+# Author : Jean-Michel Begon
+# Date : Mar 10 2014
 """
-Created on Thu Apr 10 17:04:05 2014
-
-@author: Jm
+A script to run the random and convolution classifcation
 """
-
+import sys
 import os
+from time import time
 
-import numpy as np
 from sklearn.ensemble import ExtraTreesClassifier
 
-from CoordinatorFactory import Const
+from CoordinatorFactory import Const, coordinatorRandConvFactory
 from Classifier import Classifier
+from SubWindowExtractor import SubWindowExtractor
+from FilterGenerator import FilterGenerator
 from CifarLoader import CifarFromNumpies
 from ImageBuffer import FileImageBuffer, NumpyImageLoader
-from Coordinator import Coordinator
-from Logger import StandardLogger, ProgressLogger
-from NumpyFactory import NumpyFactory
-
-
-class MemroyTestCoordinator(Coordinator):
-    def __init__(self, nbFeatures, nbObjects, logger, verbosity):
-        Coordinator.__init__(self, logger, verbosity)
-        self._nbFeatures = nbFeatures
-        self._nbObj = nbObjects
-        self._factory = NumpyFactory()
-
-    def _onProcess(self, imageBuffer=None, learningPhase=None):
-        X = self._factory.createArray((self._nbObj, self._nbFeatures))
-        y = self._factory.createArray((self._nbObj))
-        return X, y
 
 
 #======HYPER PARAMETERS======#
+#----RandConv param
+#Filtering
 nb_filters = 100
+filterGenConfiguration = (Const.GEN_REAL, (-1, 1))
+#filterGenConfiguration = (Const.GEN_SET, [(-1, 0.3), (0, 0.4), (1, 0.3)])
+filterMinSize = 2
+filterMaxSize = 32
+filterNormalisation = FilterGenerator.NORMALISATION_MEANVAR
+
+#Aggregation
 poolings = [(2, 2, Const.POOLING_AGGREG_AVG)]
 
+#Subwindow
 nbSubwindows = 10
+subwindowMinSizeRatio = 0.75
+subwindowMaxSizeRatio = 1.
 subwindowTargetWidth = 16
 subwindowTargetHeight = 16
+fixedSize = False
+subwindowInterpolation = SubWindowExtractor.INTERPOLATION_BILINEAR
 
-nbJobs = 30
-verbosity = 50
+#Misc.
+includeOriginalImage = True
+random = False
+nbJobs = -1
+verbosity = 8
 tempFolder = "tmp/"
 
 #-----Extratree param
@@ -58,20 +61,30 @@ verbose = 8
 maxLearningSize = 50000
 maxTestingSize = 10000
 
-learningUse = 50000
+learningUse = 50
 learningSetDir = "learn/"
 learningIndexFile = "0index"
 
-testingUse = 10000
+testingUse = 10
 testingSetDir = "test/"
 testingIndexFile = "0index"
 
 
 def run(nb_filters=nb_filters,
+        filterGenConfiguration=filterGenConfiguration,
+        filterMinSize=filterMinSize,
+        filterMaxSize=filterMaxSize,
+        filterNormalisation=filterNormalisation,
         poolings=poolings,
         nbSubwindows=nbSubwindows,
+        subwindowMinSizeRatio=subwindowMinSizeRatio,
+        subwindowMaxSizeRatio=subwindowMaxSizeRatio,
         subwindowTargetWidth=subwindowTargetWidth,
         subwindowTargetHeight=subwindowTargetHeight,
+        fixedSize=fixedSize,
+        subwindowInterpolation=subwindowInterpolation,
+        includeOriginalImage=includeOriginalImage,
+        random=random,
         nbJobs=nbJobs,
         verbosity=verbosity,
         tempFolder=tempFolder,
@@ -86,6 +99,10 @@ def run(nb_filters=nb_filters,
         learningUse=learningUse,
         testingUse=testingUse):
 
+    randomState = None
+    if random:
+        randomState = 100
+
     lsSize = learningUse
     if learningUse > maxLearningSize:
         lsSize = maxLearningSize
@@ -94,23 +111,27 @@ def run(nb_filters=nb_filters,
     if testingUse > maxTestingSize:
         tsSize = maxTestingSize
 
-    totalNbFeatures = nb_filters*len(poolings)*subwindowTargetWidth*subwindowTargetHeight*3
-    totalNbObj = lsSize*nbSubwindows
-
-    nbFeatures = totalNbFeatures/nbJobs
-
-    floatSize = np.zeros().itemsize
-    singleArraySize = nbFeatures*totalNbObj*floatSize
-    totalArraySize = totalNbFeatures*totalNbObj*floatSize
-
     #======INSTANTIATING========#
     os.environ["JOBLIB_TEMP_FOLDER"] = "/home/jmbegon/jmbegon/code/work/tmp/"
     #--Pixit--
-    logger = ProgressLogger(StandardLogger(autoFlush=True,
-                                           verbosity=verbosity))
-    memCoord = MemroyTestCoordinator(nbFeatures, totalNbObj, logger, verbosity)
-    if nbJobs != 1:
-        memCoord.parallelize(nbJobs, tempFolder)
+    randConvCoord = coordinatorRandConvFactory(
+        nbFilters=nb_filters,
+        filterGenConfiguration=filterGenConfiguration,
+        filterMinSize=filterMinSize,
+        filterMaxSize=filterMaxSize,
+        nbSubwindows=nbSubwindows,
+        subwindowMinSizeRatio=subwindowMinSizeRatio,
+        subwindowMaxSizeRatio=subwindowMaxSizeRatio,
+        subwindowTargetWidth=subwindowTargetWidth,
+        subwindowTargetHeight=subwindowTargetHeight,
+        poolings=poolings,
+        filterNormalisation=filterNormalisation,
+        subwindowInterpolation=subwindowInterpolation,
+        includeOriginalImage=includeOriginalImage,
+        nbJobs=nbJobs,
+        verbosity=verbosity,
+        tempFolder=tempFolder,
+        random=random)
 
     #--Extra-tree--
     baseClassif = ExtraTreesClassifier(nbTrees,
@@ -120,10 +141,11 @@ def run(nb_filters=nb_filters,
                                        min_samples_leaf=minSamplesLeaf,
                                        bootstrap=bootstrap,
                                        n_jobs=nbJobsEstimator,
+                                       random_state=randomState,
                                        verbose=verbose)
 
     #--Classifier
-    classifier = Classifier(memCoord, baseClassif)
+    classifier = Classifier(randConvCoord, baseClassif)
 
     #--Data--
     loader = CifarFromNumpies(learningSetDir, learningIndexFile)
@@ -136,18 +158,43 @@ def run(nb_filters=nb_filters,
 
     #=====COMPUTATION=====#
     #--Learning--#
+    print "Starting learning"
+    fitStart = time()
     classifier.fit(learningSet)
+    fitEnd = time()
+    print "Learning done", (fitEnd-fitStart), "seconds"
+    sys.stdout.flush()
+
+    #--Testing--#
+    y_truth = testingSet.getLabels()
+    predStart = time()
+    y_pred = classifier.predict(testingSet)
+    predEnd = time()
+    accuracy = classifier.accuracy(y_pred, y_truth)
+    confMat = classifier.confusionMatrix(y_pred, y_truth)
+
+    #====ANALYSIS=====#
+    importance, order = randConvCoord.importancePerFeatureGrp(baseClassif)
 
     print "========================================="
     print "-----------Filtering--------------"
     print "nb_filters", nb_filters
+    print "filterGenConfiguration", filterGenConfiguration
+    print "filterMinSize", filterMinSize
+    print "filterMaxSize", filterMaxSize
+    print "filterNormalisation", filterNormalisation
     print "----------Pooling--------------"
     print "poolings", poolings
     print "--------SW extractor----------"
     print "#Subwindows", nbSubwindows
+    print "subwindowMinSizeRatio", subwindowMinSizeRatio
+    print "subwindowMaxSizeRatio", subwindowMaxSizeRatio
     print "subwindowTargetWidth", subwindowTargetWidth
     print "subwindowTargetHeight", subwindowTargetHeight
+    print "fixedSize", fixedSize
     print "------------Misc-----------------"
+    print "includeOriginalImage", includeOriginalImage
+    print "random", random
     print "tempFolder", tempFolder
     print "verbosity", verbosity
     print "nbJobs", nbJobs
@@ -160,15 +207,20 @@ def run(nb_filters=nb_filters,
     print "bootstrap", bootstrap
     print "nbJobsEstimator", nbJobsEstimator
     print "verbose", verbose
+    print "randomState", randomState
     print "------------Data---------------"
     print "LearningSet size", len(learningSet)
     print "TestingSet size", len(testingSet)
     print "-------------------------------"
-    print "totalNbFeatures", totalNbFeatures
-    print "totalNbObj", totalNbObj
-    print "singleArraySize", singleArraySize
-    print "totalArraySize", totalArraySize
+    print "Fit time", (fitEnd-fitStart), "seconds"
+    print "Classifcation time", (predEnd-predStart), "seconds"
+    print "Accuracy", accuracy
 
+    return accuracy, confMat, importance, order
 
 if __name__ == "__main__":
-    run()
+    acc, confMat, importance, order = run()
+
+    print "Confusion matrix :\n", confMat
+    print "Feature importance :\n", importance
+    print "Feature importance order :\n", order
