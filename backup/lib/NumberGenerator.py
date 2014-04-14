@@ -7,7 +7,8 @@ A set of number generator
 from sklearn.utils import check_random_state
 
 __all__ = ["NumberGenerator", "IntegerUniformGenerator", "OddUniformGenerator",
-           "GaussianNumberGenerator", "CustomDiscreteNumberGenerator"]
+           "GaussianNumberGenerator", "CustomDiscreteNumberGenerator",
+		   "ConstantGenerator"]
 
 
 class NumberGenerator:
@@ -202,3 +203,18 @@ class OddUniformGenerator(IntegerUniformGenerator):
         if minVal % 2 == 0:
             minVal += 1
         return minVal + 2*int(self._randGen.rand()*((maxVal - minVal)/2+1))
+		
+		
+class ConstantGenerator(NumberGenerator):
+    """
+    =================
+    ConstantGenerator
+    =================
+    A not so random number generator. "Generate" a constant number while
+    preserving the :class:`NumberGenerator` interface.
+    """
+    def __init__(self, constant):
+        self._const = constant
+
+    def getNumber(self, minVal=None,  maxVal=None):
+        return self._const

@@ -13,8 +13,8 @@ class NumpyFactory:
     instanceCounter = 0
 
     def __init__(self, maxBytes=10e6, tmpFolder="tmp/", verbosity=50):
-        self._tmpFolder = "tmp/"
-        self._maxBytes = 10e6
+        self._tmpFolder = tmpFolder
+        self._maxBytes = maxBytes
         #self._id = self._identity()
         self._mmap = pol.ArrayMemmapReducer(max_nbytes=maxBytes,
                                             temp_folder=tmpFolder,
@@ -29,7 +29,11 @@ class NumpyFactory:
 
     def createArray(self, shape):
         size = np.prod(shape)*np.dtype(np.float).itemsize
-        if size > self._maxBytes:
+        if size < self._maxBytes:
             return np.zeros(shape)
         pickler, data = self._mmap(np.zeros(shape))
         return pickler(*data)
+
+if __name__ == "__main__":
+    npFact = NumpyFactory()
+    X = npFact.createArray((50000, 50000))

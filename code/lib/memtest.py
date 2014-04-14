@@ -31,6 +31,9 @@ class MemroyTestCoordinator(Coordinator):
         y = self._factory.createArray((self._nbObj))
         return X, y
 
+    def nbFeaturesPerObject(self, nbColors=1):
+        return self._nbFeatures
+
 
 #======HYPER PARAMETERS======#
 nb_filters = 100
@@ -99,9 +102,14 @@ def run(nb_filters=nb_filters,
 
     nbFeatures = totalNbFeatures/nbJobs
 
-    floatSize = np.zeros().itemsize
+    floatSize = np.zeros(()).itemsize
     singleArraySize = nbFeatures*totalNbObj*floatSize
     totalArraySize = totalNbFeatures*totalNbObj*floatSize
+
+    print "totalNbFeatures", totalNbFeatures
+    print "totalNbObj", totalNbObj
+    print "singleArraySize", singleArraySize
+    print "totalArraySize", totalArraySize
 
     #======INSTANTIATING========#
     os.environ["JOBLIB_TEMP_FOLDER"] = "/home/jmbegon/jmbegon/code/work/tmp/"
