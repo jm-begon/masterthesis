@@ -188,7 +188,7 @@ class TaskExecutor(Progressable):
         return self.execute(descr, function, data, *args, **kwargs)
 
     @abstractmethod
-    def createArray(self, shape, dtype):
+    def createArray(self, shape, dtype=float):
         """
         Return
         ------
@@ -201,6 +201,7 @@ class TaskExecutor(Progressable):
     @abstractmethod
     def clean(self, array):
         pass
+
 
 class SerialExecutor(TaskExecutor):
     """
@@ -233,7 +234,7 @@ class SerialExecutor(TaskExecutor):
             if len(kwargs) == 0:
                 ls = [function(data, startIndex=0)]
             else:
-                ls = [function(data, startIndex=0, *kwargs)]
+                ls = [function(data, startIndex=0, **kwargs)]
         elif len(kwargs) == 0:
             ls = [function(data, startIndex=0, *args)]
         else:
@@ -241,11 +242,12 @@ class SerialExecutor(TaskExecutor):
         self.endTask()
         return ls
 
-    def createArray(self, shape, dtype):
+    def createArray(self, shape, dtype=float):
         return np.zeros(shape, dtype)
 
     def clean(self, array):
         pass
+
 
 class ParallelExecutor(TaskExecutor):
     """
@@ -326,7 +328,7 @@ class ParallelExecutor(TaskExecutor):
 
         return allData
 
-    def createArray(self, shape, dtype):
+    def createArray(self, shape, dtype=float):
         self._numpyFactory.createArray(shape, dtype)
 
     def clean(self, array):

@@ -95,7 +95,6 @@ class Coordinator(Progressable):
 
         self.logMsg("Allocating the memory...", 35)
 
-        #TODO XXX memmap
         nbFeatures = self.nbFeaturesPerObject(self._nbColors)
         nbObjs = self.nbObjects(imageBuffer)
 

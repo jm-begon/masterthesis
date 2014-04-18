@@ -212,6 +212,8 @@ def getFilterGenerator(policy, parameters, nbFilters, random=False):
                                          subNbFilters, random))
         return OrderedMFF(ls, nbFilters)
 
+    print policy, id(policy)
+    print Const.FGEN_ZEROPERT, id(Const.FGEN_ZEROPERT)
     #Parameters is a dictionary
     valSeed = None
     sizeSeed = None
@@ -241,21 +243,26 @@ def getFilterGenerator(policy, parameters, nbFilters, random=False):
     if "normalization" in parameters:
         normalization = parameters["normalization"]
 
-    elif policy is Const.FGEN_ZEROPERT:
+    if policy is Const.FGEN_ZEROPERT:
+        print "Zero perturbation filters"
         baseFilterGenerator = FilterGenerator(valGenerator, sizeGenerator,
                                               normalisation=normalization)
     elif policy is Const.FGEN_CUSTOM:
+        print "Custom filters"
         baseFilterGenerator = customFilters()
     elif policy is Const.FGEN_IDPERT:
+        print "Id perturbation filters"
         baseFilterGenerator = IdPerturbatedFG(valGenerator, sizeGenerator,
                                               normalisation=normalization)
     elif policy is Const.FGEN_IDDIST:
+        print "Id distance filters"
         maxDist = parameters["maxDist"]
         baseFilterGenerator = IdMaxL1DistPerturbFG(valGenerator, sizeGenerator,
                                                    maxDist,
                                                    normalisation=normalization,
                                                    shufflingSeed=shufflingSeed)
     elif policy is Const.FGEN_STRAT:
+        print "Stratified filters"
         nbCells = parameters["strat_nbCells"]
         minPerturbation = 0
         if "minPerturbation" in parameters:
@@ -273,11 +280,13 @@ def getFilterGenerator(policy, parameters, nbFilters, random=False):
                                            cellSeed=cellSeed)
 
     if "sparseProb" in parameters:
+        print "Adding sparcity"
         sparseProb = parameters["sparseProb"]
         baseFilterGenerator = SparsityDecoratorFG(baseFilterGenerator,
                                                   sparseProb,
                                                   sparseSeed)
 
+    print "Returning filters"
     return Finite3SameFilter(baseFilterGenerator, nbFilters)
 
 

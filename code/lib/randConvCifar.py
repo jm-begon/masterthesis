@@ -51,7 +51,7 @@ subwindowInterpolation = SubWindowExtractor.INTERPOLATION_BILINEAR
 #Misc.
 includeOriginalImage = True
 random = False
-nbJobs = -1
+nbJobs = 1
 verbosity = 8
 tempFolder = "tmp/"
 
