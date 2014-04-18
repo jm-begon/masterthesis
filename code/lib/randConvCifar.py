@@ -22,11 +22,19 @@ from ImageBuffer import FileImageBuffer, NumpyImageLoader
 #----RandConv param
 #Filtering
 nb_filters = 100
-filter_min_val = -1
-filter_max_val = 1
-filterMinSize = 2
-filterMaxSize = 32
-filterNormalisation = FilterGenerator.NORMALISATION_MEANVAR
+filterPolicy = (Const.FGEN_ZEROPERT, {"minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_RU, "normalization":FilterGenerator.NORMALISATION_MEANVAR})
+#filterPolicy = (Const.FGEN_ZEROPERT, {"minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_SET, "probLaw":[(-1, 0.3), (0, 0.4), (1, 0.3)], "normalization":FilterGenerator.NORMALISATION_MEANVAR})
+#filterPolicy = (Const.FGEN_IDPERT, {"minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_RU})
+#filterPolicy = (Const.FGEN_IDPERT, {"minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_GAUSS, "outRange":0.05})
+#filterPolicy = (Const.FGEN_IDDIST, {"minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_RU, "maxDist":5})
+#filterPolicy = (Const.FGEN_STRAT, {"minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_GAUSS,  "outRange":0.001, "strat_nbCells":10, "minPerturbation":minPerturbation, "maxPerturbation":maxPerturbation})
+#
+#filterPolicy = (Const.FGEN_ZEROPERT, {"sparseProb":0.25, "minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_RU, "normalization":FilterGenerator.NORMALISATION_MEANVAR})
+#filterPolicy = (Const.FGEN_ZEROPERT, {"sparseProb":0.25, "minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_SET, "probLaw":[(-1, 0.3), (0, 0.4), (1, 0.3)], "normalization":FilterGenerator.NORMALISATION_MEANVAR})
+#filterPolicy = (Const.FGEN_IDPERT, {"sparseProb":0.25, "minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_RU})
+#filterPolicy = (Const.FGEN_IDPERT, {"sparseProb":0.25, "minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_GAUSS, "outRange":0.05})
+#filterPolicy = (Const.FGEN_IDDIST, {"sparseProb":0.25, "minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_RU, "maxDist":5})
+#filterPolicy = (Const.FGEN_STRAT, {"sparseProb":0.25, "minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_GAUSS,  "outRange":0.001, "strat_nbCells":10, "minPerturbation":minPerturbation, "maxPerturbation":maxPerturbation})
 
 #Aggregation
 poolings = [(2, 2, Const.POOLING_AGGREG_AVG)]
@@ -44,7 +52,7 @@ subwindowInterpolation = SubWindowExtractor.INTERPOLATION_BILINEAR
 includeOriginalImage = True
 random = False
 nbJobs = -1
-verbosity = 50
+verbosity = 8
 tempFolder = "tmp/"
 
 #-----Extratree param
@@ -55,27 +63,23 @@ minSamplesSplit = 2
 minSamplesLeaf = 1
 bootstrap = False
 nbJobsEstimator = -1
-verbose = 50
+verbose = 8
 
 #=====DATA=====#
 maxLearningSize = 50000
 maxTestingSize = 10000
 
-learningUse = 500
+learningUse = 50
 learningSetDir = "learn/"
 learningIndexFile = "0index"
 
-testingUse = 500
+testingUse = 10
 testingSetDir = "test/"
 testingIndexFile = "0index"
 
 
 def run(nb_filters=nb_filters,
-        filter_min_val=filter_min_val,
-        filter_max_val=filter_max_val,
-        filterMinSize=filterMinSize,
-        filterMaxSize=filterMaxSize,
-        filterNormalisation=filterNormalisation,
+        filterPolicy=filterPolicy,
         poolings=poolings,
         nbSubwindows=nbSubwindows,
         subwindowMinSizeRatio=subwindowMinSizeRatio,
@@ -117,17 +121,13 @@ def run(nb_filters=nb_filters,
     #--Pixit--
     randConvCoord = coordinatorRandConvFactory(
         nbFilters=nb_filters,
-        filterMinVal=filter_min_val,
-        filterMaxVal=filter_max_val,
-        filterMinSize=filterMinSize,
-        filterMaxSize=filterMaxSize,
+        filterPolicy=filterPolicy,
         nbSubwindows=nbSubwindows,
         subwindowMinSizeRatio=subwindowMinSizeRatio,
         subwindowMaxSizeRatio=subwindowMaxSizeRatio,
         subwindowTargetWidth=subwindowTargetWidth,
         subwindowTargetHeight=subwindowTargetHeight,
         poolings=poolings,
-        filterNormalisation=filterNormalisation,
         subwindowInterpolation=subwindowInterpolation,
         includeOriginalImage=includeOriginalImage,
         nbJobs=nbJobs,
@@ -181,11 +181,7 @@ def run(nb_filters=nb_filters,
     print "========================================="
     print "-----------Filtering--------------"
     print "nb_filters", nb_filters
-    print "filter_min_val", filter_min_val
-    print "filter_max_val", filter_max_val
-    print "filterMinSize", filterMinSize
-    print "filterMaxSize", filterMaxSize
-    print "filterNormalisation", filterNormalisation
+    print "filterPolicy", filterPolicy
     print "----------Pooling--------------"
     print "poolings", poolings
     print "--------SW extractor----------"

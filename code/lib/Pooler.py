@@ -8,7 +8,11 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 
 __all__ = ["Pooler", "MultiPooler", "IdentityPooler", "ConvolutionalPooler",
-           "ConvMaxPooler", "ConvMinPooler", "ConvAvgPooler"]
+           "ConvMaxPooler", "ConvMinPooler", "ConvAvgPooler",
+           "MorphOpeningPooler", "MorphClosingPooler",
+           "MorphErosionGradientPooler", "MorphDilationGradientPooler",
+           "MorphGradientPooler", "MorphLaplacianPooler",
+           "MorphBlackHatPooler", "MorphWhiteHatPooler"]
 
 
 class Pooler:
@@ -90,6 +94,32 @@ class MultiPooler:
         return len(self._poolers)
 
 
+class ChainPooler(Pooler):
+    """
+    ===========
+    ChainPooler
+    ===========
+    A class:`ChainPooler` instance chains several class:`Pooler` instances.
+    From a list of class:`Pooler` ls = [p1, p2,..., pn] and an array arr,
+    returns : pn.pool(...p2.pool(p1.pool(arr))).
+    class:`Pooler`s are applied in the order return by the iterator
+    """
+    def __init__(self, poolers):
+        """
+        Parameters
+        ----------
+        poolers : iterable of class:`Pooler`
+            The list of poolers to use
+        """
+        self._poolers = poolers
+
+    def pool(self, npArray):
+        tmp = npArray
+        for pooler in self._poolers:
+            tmp = pooler.pool(tmp)
+        return tmp
+
+
 class IdentityPooler(Pooler):
     """
     ==============
@@ -100,6 +130,45 @@ class IdentityPooler(Pooler):
 
     def pool(self, npArray):
         return npArray
+
+
+class OutsideRange:
+    """
+    ============
+    OutsideRange
+    ============
+    An iterable for outside-of-the-2D-array point
+    """
+    def __init__(self, cMin, cMax, up, down, rowInfset, rowOffset,
+                 colInset, colOffset):
+        self.cMin = cMin
+        self.cMax = cMax
+        self.up = up
+        self.down = down
+        self.rowInfset = rowInfset
+        self.rowOffset = rowOffset
+        self.colInset = colInset
+        self.colOffset = colOffset
+
+    def __iter__(self):
+        offCoord = []
+         #-- row inf
+        for row in self.rowInfset:
+            for col in xrange(self.cMin, self.cMax+1):
+                offCoord.append((row, col))
+        #-- row sup
+        for row in self.rowOffset:
+            for col in xrange(self.cMin, self.cMax+1):
+                offCoord.append((row, col))
+        #-- col left
+        for col in self.colInfset:
+            for row in xrange(self.up, self.down):
+                offCoord.append((row, col))
+        #-- col right
+        for col in self.colOffset:
+            for row in xrange(self.up, self.down):
+                offCoord.append((row, col))
+        return offCoord
 
 
 class ConvolutionalPooler(Pooler):
@@ -199,23 +268,8 @@ class ConvolutionalPooler(Pooler):
             colOffset = xrange(npWidth, r)
             r = npWidth
         #Adding offset coordinates
-        offCoord = []
-        #-- row inf
-        for row in rowInfset:
-            for col in xrange(cMin, cMax+1):
-                offCoord.append((row, col))
-        #-- row sup
-        for row in rowOffset:
-            for col in xrange(cMin, cMax+1):
-                offCoord.append((row, col))
-        #-- col left
-        for col in colInfset:
-            for row in xrange(u, d):
-                offCoord.append((row, col))
-        #-- col right
-        for col in colOffset:
-            for row in xrange(u, d):
-                offCoord.append((row, col))
+        offCoord = OutsideRange(cMin, cMax, u, d, rowInfset, rowOffset,
+                                colInfset, colOffset)
 
         return npArray[u:d, l:r], (u, l, d-1, r-1), offCoord,
 
@@ -351,3 +405,168 @@ class ConvAvgPooler(ConvolutionalPooler):
             for depth in range(subArray.shape[2]):
                 vs.append((subArray[:, :, depth]).mean())
             return vs
+
+
+class MorphOpeningPooler(ChainPooler):
+
+    def __init__(self, height, width):
+        erosion = ConvMinPooler(height, width)
+        dilation = ConvMaxPooler(height, width)
+        ChainPooler.__init__(self, [erosion, dilation])
+
+
+class MorphClosingPooler(ChainPooler):
+
+    def __init__(self, height, width):
+        erosion = ConvMinPooler(height, width)
+        dilation = ConvMaxPooler(height, width)
+        ChainPooler.__init__(self, [dilation, erosion])
+
+
+class MorphErosionGradientPooler(Pooler):
+
+    def __init__(self, height, width):
+        self._erosion = ConvMinPooler(height, width)
+
+    def pool(self, npArray):
+        eroded = self._erosion.pool(npArray)
+        return npArray - eroded
+
+
+class MorphDilationGradientPooler(Pooler):
+
+    def __init__(self, height, width):
+        self._dilation = ConvMaxPooler(height, width)
+
+    def pool(self, npArray):
+        dilated = self._dilation.pool(npArray)
+        return dilated - npArray
+
+
+class MorphGradientPooler(Pooler):
+
+    def __init__(self, height, width):
+        self._dilation = ConvMaxPooler(height, width)
+        self._erosion = ConvMinPooler(height, width)
+
+    def pool(self, npArray):
+        dilated = self._dilation.pool(npArray)
+        eroded = self._erosion.pool(npArray)
+        morphEroGrad = npArray - eroded
+        morphDilGrad = dilated - npArray
+        return morphEroGrad + morphDilGrad
+
+
+class MorphLaplacianPooler(Pooler):
+
+    def __init__(self, height, width):
+        self._dilation = ConvMaxPooler(height, width)
+        self._erosion = ConvMinPooler(height, width)
+
+    def pool(self, npArray):
+        dilated = self._dilation.pool(npArray)
+        eroded = self._erosion.pool(npArray)
+        morphEroGrad = npArray - eroded
+        morphDilGrad = dilated - npArray
+        return morphDilGrad - morphEroGrad
+
+
+class MorphWhiteHatPooler(Pooler):
+
+    def __init__(self, height, width):
+        self._opening = MorphOpeningPooler(height, width)
+
+    def pool(self, npArray):
+        opened = self._opening.pool(npArray)
+        return npArray - opened
+
+
+class MorphBlackHatPooler(Pooler):
+
+    def __init__(self, height, width):
+        self._closing = MorphClosingPooler(height, width)
+
+    def pool(self, npArray):
+        closed = self._closing.pool(npArray)
+        return closed - npArray
+
+
+if __name__ == "__main__":
+    from PIL import Image
+    import pylab as pl
+
+    def imshow(arr, title=None, interpolation="none"):
+        pl.figure()
+        pl.imshow(arr, cmap="gray", interpolation=interpolation)
+        pl.colorbar()
+        if title is not None:
+            pl.title(title)
+
+    lena = np.array(Image.open("lena.jpg"))[:, :, 0]
+
+    imshow(lena, "lena")
+    print "lena", lena.min(), lena.mean(), lena.max()
+
+    height = 3
+    width = 3
+
+    avgPooler = ConvAvgPooler(height, width)
+    minPooler = ConvMinPooler(height, width)
+    opPooler = MorphOpeningPooler(height, width)
+    maxPooler = ConvMaxPooler(height, width)
+    clsPooler = MorphClosingPooler(height, width)
+
+    avgLena = avgPooler.pool(lena)
+    imshow(avgLena, "avgLena")
+    print "avgLena", avgLena.min(), avgLena.mean(), avgLena.max()
+
+    minLena = minPooler.pool(lena)
+    imshow(minLena, "minLena")
+    print "minLena", minLena.min(), minLena.mean(), minLena.max()
+
+    opnLena = opPooler.pool(lena)
+    imshow(opnLena, "opnLena")
+    print "opnLena", opnLena.min(), opnLena.mean(), opnLena.max()
+
+    maxLena = maxPooler.pool(lena)
+    imshow(maxLena, "maxLena")
+    print "maxLena", maxLena.min(), maxLena.mean(), maxLena.max()
+
+    clsLena = clsPooler.pool(lena)
+    imshow(clsLena, "clsLena")
+    print "clsLena", clsLena.min(), clsLena.mean(), clsLena.max()
+
+    geLena = lena - minLena
+    imshow(geLena, "Erosion gradient")
+    print "geLena", geLena.min(), geLena.mean(), geLena.max()
+
+    gdLena = maxLena - lena
+    imshow(gdLena, "Dilatation gradient")
+    print "gdLena", gdLena.min(), gdLena.mean(), gdLena.max()
+
+    mgLena = geLena + gdLena
+    imshow(mgLena, "Morphological gradient")
+    print "mgLena", mgLena.min(), mgLena.mean(), mgLena.max()
+
+    lapLena = gdLena - geLena
+    imshow(lapLena, "Morphological Laplacian")
+    print "lapLena", lapLena.min(), lapLena.mean(), lapLena.max()
+
+    whLean = lena - opnLena
+    imshow(whLean, "White top-hat")
+    print "whLean", whLean.min(), whLean.mean(), whLean.max()
+
+    bhLena = clsLena - lena
+    imshow(bhLena, "Black top-hat")
+    print "bhLena", bhLena.min(), bhLena.mean(), bhLena.max()
+
+
+
+
+
+
+
+
+
+
+

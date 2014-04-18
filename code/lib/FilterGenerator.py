@@ -15,7 +15,8 @@ from sklearn.utils import check_random_state
 
 __all__ = ["FilterGenerator", "FixSizeFilterGenerator", "FiniteFilter",
            "Finite3Filter", "Finite3SameFilter", "IdPerturbatedFG",
-           "IdMaxL1DistPerturbFG", "StratifiedFG", "OrderedMFF"]
+           "IdMaxL1DistPerturbFG", "StratifiedFG", "OrderedMFF",
+           "SparsityDecoratorFG"]
 
 
 class FilterGenerator:
@@ -93,6 +94,9 @@ class FilterGenerator:
         normalizedFilter : 2D numpy array of the same shape
             the normalized filter
         """
+        if self._normalisation is None:
+            return filt
+
         if self._normalisation == FilterGenerator.NORMALISATION_NONE:
             return filt
 

@@ -92,25 +92,28 @@ class Coordinator(Progressable):
         :meth:`_onProcess`. It is this method that should be overloaded
         """
         self._nbColors = imageBuffer.nbBands()
-#
-#        nbFeatures = self.nbFeaturesPerObject(nbColors)
-#        nbObjs = self.nbObjects(imageBuffer)
-#
-#        X = np.zeros((nbObjs, nbFeatures))
-#        y = np.zeros((nbObjs))
-#
-        ls = self._exec("Extracting features", self._onProcess, imageBuffer,
-                        learningPhase=learningPhase)
 
-        # Reduce
-        self.logMsg("Concatenating the data...", 35)
-        y = np.concatenate([y for _, y in ls])
-        X = np.vstack(X for X, _ in ls)
+        self.logMsg("Allocating the memory...", 35)
 
+        #TODO XXX memmap
+        nbFeatures = self.nbFeaturesPerObject(self._nbColors)
+        nbObjs = self.nbObjects(imageBuffer)
+
+        X = self._exec.createArray((nbObjs, nbFeatures))
+        y = self._exec.createArray((nbObjs))
+
+        self._exec.executeWithStart("Extracting features",
+                                    self._onProcess, imageBuffer,
+                                    learningPhase=learningPhase,
+                                    XResult=X, yResult=y)
+
+        self._exec.clean(X)
+        self._exec.clean(y)
         return X, y
 
     @abstractmethod
-    def _onProcess(self, imageBuffer, subsection, learningPhase, X, y):
+    def _onProcess(self, imageBuffer, startIndex, learningPhase,
+                   XResult, yResult):
         """
         Extracts the feature vectors for the images contained in the
         :class:`ImageBuffer`
@@ -232,34 +235,32 @@ class PixitCoordinator(Coordinator):
         self._multiSWExtractor = multiSWExtractor
         self._featureExtractor = featureExtractor
 
-    def _onProcess(self, imageBuffer, learningPhase):
+    def _onProcess(self, imageBuffer, startIndex, learningPhase,
+                   XResult, yResult):
         """Overload"""
-        nbFeatures = self.nbFeaturesPerObject(self._nbColors)
-        nbObjs = self.nbObjects(imageBuffer)
-        X = self._npCreator.createArray((nbObjs, nbFeatures))
-        y = self._npCreator.createArray((nbObjs))
 
         convertor = NumpyPILConvertor()
 
         #Logging
-        counter = 0
-        index = 0
         self.setTask(len(imageBuffer),
                      "PixitCoordinator loop for each image")
+        #Init
+        counter = 0
+        index = startIndex * self.nbObjMultiplicator()
+
+        #Main loop
         for image, label in imageBuffer:
             image = convertor.numpyToPIL(image)
             imgLs = self._multiSWExtractor.extract(image)
             #Filling the X and y
-            for i, img in enumerate(imgLs):
-                X[index] = self._featureExtractor.extract(
+            for img in imgLs:
+                XResult[index] = self._featureExtractor.extract(
                     convertor.pILToNumpy(img))
-                y[index] = label
+                yResult[index] = label
                 index += 1
             #Logging progress
             self.updateTaskProgress(counter)
             counter += 1
-
-        return X, y
 
     def nbFeaturesPerObject(self, nbColors):
         height, width = self._multiSWExtractor.getFinalSize()
@@ -267,8 +268,11 @@ class PixitCoordinator(Coordinator):
                                                           width,
                                                           nbColors)
 
+    def nbObjMultiplicator(self):
+        return self._multiSWExtractor.nbSubwidows()
+
     def nbObjects(self, imageBuffer):
-        return len(imageBuffer)*self._multiSWExtractor.nbSubwidows()
+        return len(imageBuffer)*self.nbObjMultiplicator()
 
 
 class RandConvCoordinator(Coordinator):
@@ -310,43 +314,39 @@ class RandConvCoordinator(Coordinator):
         self._convolExtractor = convolutionalExtractor
         self._featureExtractor = featureExtractor
 
-    def _onProcess(self, imageBuffer, learningPhase):
+    def _onProcess(self, imageBuffer, startIndex, learningPhase,
+                   XResult, yResult):
         """Overload"""
-        nbFeatures = self.nbFeaturesPerObject(self._nbColors)
-        nbObjs = self.nbObjects(imageBuffer)
-        X = self._npCreator.createArray((nbObjs, nbFeatures))
-        y = self._npCreator.createArray((nbObjs))
-
         #Logging
-        counter = 0
-        row = 0
         self.setTask(len(imageBuffer),
                      "RandConvCoordinator loop for each image")
 
+        #Init
+        counter = 0
+        row = startIndex * self.nbObjMultiplicator()
+
+        #Main loop
         for image, label in imageBuffer:
             #Get the subwindows x filters
             allSubWindows = self._convolExtractor.extract(image)
 
-            #Accessing each subwindow sets separately
+            #Accessing each subwindow set separately
             for filteredList in allSubWindows:
-                column = 0
                 #Accessing each filter separately for a given subwindow
+                column = 0
                 for filtered in filteredList:
                     #Extracting the features for each filter
                     filter_feature = self._featureExtractor.extract(filtered)
                     for val in filter_feature:
-                        X[row, column] = val
+                        XResult[row, column] = val
                         column += 1
 
                 #Corresponding label
-                y[row] = label
+                yResult[row] = label
                 row += 1
-
             #Logging progress
             self.updateTaskProgress(counter)
             counter += 1
-
-        return X, y
 
     def getFilters(self):
         """
@@ -467,8 +467,11 @@ class RandConvCoordinator(Coordinator):
         #Total number of features
         return nbGroups*nbFperGroup
 
+    def nbObjMultiplicator(self):
+        return self._convolExtractor.getNbSubwindows()
+
     def nbObjects(self, imageBuffer):
-        return len(imageBuffer)*self._convolExtractor.getNbSubwindows()
+        return len(imageBuffer)*self.nbObjMultiplicator()
 
 
 class CompressRandConvCoordinator(RandConvCoordinator):

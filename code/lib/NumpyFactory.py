@@ -4,35 +4,69 @@ Created on Sat Apr 12 15:09:00 2014
 
 @author: Jm
 """
+
+#import tempfile
+import shutil
+import os
+import sys
+import atexit
 import numpy as np
-import sklearn.externals.joblib.pool as pol
+
+
+def delete_folder(folder_path):
+    """Utility function to cleanup a temporary folder if still existing"""
+    if os.path.exists(folder_path):
+        shutil.rmtree(folder_path)
 
 
 class NumpyFactory:
+#Heavily based on joblib
 
-    instanceCounter = 0
+    SYSTEM_SHARED_MEM_FS = '/dev/shm'
+    counter = 0
 
-    def __init__(self, maxBytes=10e6, tmpFolder="tmp/", verbosity=50):
-        self._tmpFolder = tmpFolder
-        self._maxBytes = maxBytes
-        #self._id = self._identity()
-        self._mmap = pol.ArrayMemmapReducer(max_nbytes=maxBytes,
-                                            temp_folder=tmpFolder,
-                                            mmap_mode="r+",
-                                            verbose=verbosity)
+    def __init__(self, tmpFolder=SYSTEM_SHARED_MEM_FS, autoClean=True):
 
-    def _identity(self):
-        #TODO Lock
-        _id = NumpyFactory.instanceCounter
-        NumpyFactory.instanceCounter += 1
-        return _id
+        # Prepare a sub-folder name for the serialization of this particular
+        # pool instance (do not create in advance to spare FS write access if
+        # no array is to be dumped):
+        temp_folder = os.path.abspath(os.path.expanduser(tmpFolder))
+        temp_folder = os.path.join(temp_folder,
+                                   "joblib2_memmaping_pool_%d_%d" % (
+                                       os.getpid(), id(self)))
+        if not os.path.exists(temp_folder):
+            os.makedirs(temp_folder)
 
-    def createArray(self, shape):
-        size = np.prod(shape)*np.dtype(np.float).itemsize
-        if size < self._maxBytes:
-            return np.zeros(shape)
-        pickler, data = self._mmap(np.zeros(shape))
-        return pickler(*data)
+        self._temp_folder = temp_folder
+        self._files = {}
+        if autoClean:
+            atexit.register(lambda: delete_folder(temp_folder))
+
+    def createArray(self, shape, dtype):
+        # TODO : lock
+        c = NumpyFactory.counter
+        NumpyFactory.counter += 1
+
+        filePath = os.path.join(self._temp_folder, "f"+str(c))
+        array = np.memmap(filePath, dtype=dtype, shape=shape, mode='r+')
+        self._files[id(array)] = filePath
+        return array
+
+    def clean(self, array):
+        if not self._files.has_key:
+            return False
+        # TODO XXX : manage exceptions
+        try:
+            filePath = self._files[id(array)]
+            delete_folder(filePath)
+            del self._files[filePath]
+        except:
+            print "Unexpected error:", sys.exc_info()[0]
+            return False
+        return True
+
+    def cleanAll(self):
+        delete_folder(self._temp_folder)
 
 if __name__ == "__main__":
     npFact = NumpyFactory()

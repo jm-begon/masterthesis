@@ -4,18 +4,22 @@
 """
 A set of factory function to help create usual cases of coordinator
 """
+import math
 
-
-from FilterGenerator import FilterGenerator, Finite3SameFilter
-from FilterHolder import customFinite3sameFilter
+from FilterGenerator import (FilterGenerator, Finite3SameFilter,
+                             IdPerturbatedFG, IdMaxL1DistPerturbFG,
+                             StratifiedFG, OrderedMFF, SparsityDecoratorFG)
+from FilterHolder import customFinite3sameFilter, customFilters
 from Convolver import RGBConvolver
 from SubWindowExtractor import (MultiSWExtractor, SubWindowExtractor,
                                 FixTargetSWExtractor)
 from NumberGenerator import (OddUniformGenerator, NumberGenerator,
-                             CustomDiscreteNumberGenerator)
+                             CustomDiscreteNumberGenerator,
+                             GaussianNumberGenerator)
 from FeatureExtractor import ImageLinearizationExtractor
 from Pooler import (IdentityPooler, MultiPooler, ConvMinPooler,
-                    ConvAvgPooler, ConvMaxPooler)
+                    ConvAvgPooler, ConvMaxPooler, MorphOpeningPooler,
+                    MorphClosingPooler)
 from Aggregator import AverageAggregator, MaximumAggregator, MinimumAggregator
 from ConvolutionalExtractor import ConvolutionalExtractor
 from Coordinator import (RandConvCoordinator, PixitCoordinator,
@@ -29,16 +33,26 @@ __all__ = ["Const", "coordinatorRandConvFactory", "customRandConvFactory",
 
 
 class Const:
-    GEN_REAL = -1
-    GEN_SET = -2
+    RND_RU = "RND_RU"  # -1 (real uniform)
+    RND_SET = "RND_SET"  # -2 (Discrete set with predifined probabilities)
+    RND_GAUSS = "RND_GAUSS"  # (Gaussian distribution)
 
-    POOLING_NONE = 0
-    POOLING_AGGREG_MIN = 1
-    POOLING_AGGREG_AVG = 2
-    POOLING_AGGREG_MAX = 3
-    POOLING_CONV_MIN = 4
-    POOLING_CONV_AVG = 5
-    POOLING_CONV_MAX = 6
+    FGEN_ORDERED = "FGEN_ORDERED"  # Ordered combination of others
+    FGEN_CUSTOM = "FGEN_CUSTOM"  # Custom filters
+    FGEN_ZEROPERT = "FGEN_ZEROPERT"  # Perturbation around origin
+    FGEN_IDPERT = "FGEN_IDPERT"  # Perturbation around id filter
+    FGEN_IDDIST = "FGEN_IDDIST"  # Maximum distance around id filter
+    FGEN_STRAT = "FGEN_STRAT"  # Stratified scheme
+
+    POOLING_NONE = "POOLING_NONE"  # 0
+    POOLING_AGGREG_MIN = "POOLING_AGGREG_MIN"  # 1
+    POOLING_AGGREG_AVG = "POOLING_AGGREG_AVG"  # 2
+    POOLING_AGGREG_MAX = "POOLING_AGGREG_MAX"  # 3
+    POOLING_CONV_MIN = "POOLING_MW_MIN"  # 4
+    POOLING_CONV_AVG = "POOLING_MW_AVG"  # 5
+    POOLING_CONV_MAX = "POOLING_MW_MAX"  # 6
+    POOLING_MORPH_OPENING = "POOLING_MORPH_OPENING"  # 7
+    POOLING_MORPH_CLOSING = "POOLING_MORPH_CLOSING"  # 8
 
 
 def coordinatorPixitFactory(
@@ -139,11 +153,137 @@ def coordinatorPixitFactory(
     return coordinator
 
 
+def getMultiPoolers(poolings, finalHeight, finalWidth):
+    #Aggregator
+    poolers = []
+    for height, width, policy in poolings:
+        if policy is Const.POOLING_NONE:
+            poolers.append(IdentityPooler())
+        elif policy is Const.POOLING_AGGREG_AVG:
+            poolers.append(AverageAggregator(width, height,
+                                             finalWidth,
+                                             finalHeight))
+        elif policy is Const.POOLING_AGGREG_MAX:
+            poolers.append(MaximumAggregator(width, height,
+                                             finalWidth,
+                                             finalHeight))
+        elif policy is Const.POOLING_AGGREG_MIN:
+            poolers.append(MinimumAggregator(width, height,
+                                             finalWidth,
+                                             finalHeight))
+        elif policy is Const.POOLING_CONV_MIN:
+            poolers.append(ConvMinPooler(height, width))
+        elif policy is Const.POOLING_CONV_AVG:
+            poolers.append(ConvAvgPooler(height, width))
+        elif policy is Const.POOLING_CONV_MAX:
+            poolers.append(ConvMaxPooler(height, width))
+        elif policy is Const.POOLING_MORPH_OPENING:
+            poolers.append(MorphOpeningPooler(height, width))
+        elif policy is Const.POOLING_MORPH_CLOSING:
+            poolers.append(MorphClosingPooler(height, width))
+
+    return MultiPooler(poolers)
+
+
+def getNumberGenerator(genType, minVal, maxVal, seed, **kwargs):
+    if genType is Const.RND_RU:
+        valGenerator = NumberGenerator(minVal, maxVal, seed)
+    elif genType is Const.RND_SET:
+        probLaw = kwargs["probLaw"]
+        valGenerator = CustomDiscreteNumberGenerator(probLaw, seed)
+    elif genType is Const.RND_GAUSS:
+        if "outRange" in kwargs:
+            outRange = kwargs["outRange"]
+            valGenerator = GaussianNumberGenerator(minVal, maxVal, seed,
+                                                   outRange)
+        else:
+            valGenerator = GaussianNumberGenerator(minVal, maxVal, seed)
+    return valGenerator
+
+
+def getFilterGenerator(policy, parameters, nbFilters, random=False):
+    if policy == Const.FGEN_ORDERED:
+        #Parameters is a list of tuples (policy, parameters)
+        ls = []
+        subNbFilters = int(math.ceil(nbFilters/len(parameters)))
+
+        for subPolicy, subParameters in parameters:
+            ls.append(getFilterGenerator(subPolicy, subParameters,
+                                         subNbFilters, random))
+        return OrderedMFF(ls, nbFilters)
+
+    #Parameters is a dictionary
+    valSeed = None
+    sizeSeed = None
+    shufflingSeed = None
+    perturbationSeed = None
+    cellSeed = None
+    sparseSeed = 5
+    if random:
+        valSeed = 1
+        sizeSeed = 2
+        shufflingSeed = 3
+        perturbationSeed = 4
+        cellSeed = 5
+        sparseSeed = 6
+
+    minSize = parameters["minSize"]
+    maxSize = parameters["maxSize"]
+    sizeGenerator = OddUniformGenerator(minSize, maxSize, seed=sizeSeed)
+
+    minVal = parameters["minVal"]
+    maxVal = parameters["maxVal"]
+    valGen = parameters["valGen"]
+    valGenerator = getNumberGenerator(valGen, minVal, maxVal,
+                                      valSeed, parameters)
+
+    normalization = None
+    if "normalization" in parameters:
+        normalization = parameters["normalization"]
+
+    elif policy is Const.FGEN_ZEROPERT:
+        baseFilterGenerator = FilterGenerator(valGenerator, sizeGenerator,
+                                              normalisation=normalization)
+    elif policy is Const.FGEN_CUSTOM:
+        baseFilterGenerator = customFilters()
+    elif policy is Const.FGEN_IDPERT:
+        baseFilterGenerator = IdPerturbatedFG(valGenerator, sizeGenerator,
+                                              normalisation=normalization)
+    elif policy is Const.FGEN_IDDIST:
+        maxDist = parameters["maxDist"]
+        baseFilterGenerator = IdMaxL1DistPerturbFG(valGenerator, sizeGenerator,
+                                                   maxDist,
+                                                   normalisation=normalization,
+                                                   shufflingSeed=shufflingSeed)
+    elif policy is Const.FGEN_STRAT:
+        nbCells = parameters["strat_nbCells"]
+        minPerturbation = 0
+        if "minPerturbation" in parameters:
+            minPerturbation = parameters["minPerturbation"]
+        maxPerturbation = 1
+        if "maxPerturbation" in parameters:
+            maxPerturbation = parameters["maxPerturbation"]
+        perturbationGenerator = getNumberGenerator(valGen,
+                                                   minPerturbation,
+                                                   maxPerturbation,
+                                                   perturbationSeed)
+        baseFilterGenerator = StratifiedFG(minVal, maxVal, nbCells,
+                                           perturbationGenerator,
+                                           normalisation=normalization,
+                                           cellSeed=cellSeed)
+
+    if "sparseProb" in parameters:
+        sparseProb = parameters["sparseProb"]
+        baseFilterGenerator = SparsityDecoratorFG(baseFilterGenerator,
+                                                  sparseProb,
+                                                  sparseSeed)
+
+    return Finite3SameFilter(baseFilterGenerator, nbFilters)
+
+
 def coordinatorRandConvFactory(
         nbFilters=5,
-        filterGenConfiguration=(Const.GEN_REAL, (-1, 1)),
-        filterMinSize=1, filterMaxSize=17,
-        filterNormalisation=FilterGenerator.NORMALISATION_MEANVAR,
+        filterPolicy,
         poolings=[(3, 3, Const.POOLING_AGGREG_AVG)],
         nbSubwindows=10,
         subwindowMinSizeRatio=0.5, subwindowMaxSizeRatio=1.,
@@ -159,37 +299,12 @@ def coordinatorRandConvFactory(
     ----------
     nbFilters : int >= 0 (default : 5)
         The number of filter
-    filterGenConfiguration : pair (policy, parameters)
-        The value filter generation parameters
-        policy : int in {Const.GEN_REAL, Const.GEN_SET}
-            The filter value generation policy.
-            - Const.GEN_REAL (default):
-                generate real number between two bounds. The parameters must
-                specify theses bounds :
-                parameters : pairs (filterMinVal, filterMaxVal)
-                    filterMinVal : float (default : -1)
-                        The minimum value of a filter component
-                    filterMaxVal : float : filterMinVal <= filterMaxVal
-                    (default : 1)
-                        The maximum value of a filter component
-            - Const.GEN_SET :
-                generate number from a predefine set with a given probability
-                parameters : iterable of pairs (number, probability)
-                    number : number
-                        an element of the set from which to draw
-                    probability : float
-                        the probability of the element being chosen at each
-                        draw
-        seed : int or None (default : None)
-            if seed is int : initiate the random generator with this seed
 
-    filterMinSize : int >= 0 : odd number (default : 1)
-        The minimum size of a filter
-    filterMaxSize : int >= 0 : odd number s.t.  filterMinSize <= filterMaxSize
-    (default : 1)
-        The maximum size of a filter
-    filterNormalisation : int (default : FilterGenerator.NORMALISATION_MEANVAR)
-        The filter normalisation policy. See also :class:`FilterGenerator`
+    filterPolicy : pair (policyType, parameters)
+        policyType : one of Const.FGEN_*
+            The type of filter generation policy to use
+        parameters : dict
+            The parameter dictionnary to forward to :func:`getFilterGenerator`
 
     poolings : iterable of triple (height, width, policy) (default :
     [(3, 3, Const.POOLING_AGGREG_AVG)])
@@ -259,61 +374,23 @@ def coordinatorRandConvFactory(
         Base instance of :class:`ImageLinearizationExtractor`
     """
     #RANDOMNESS
-    swngSeed = 0
-    filtValGenSeed = 1
-    filtSizeGenSeed = 2
-    if random is None:
-        swngSeed = None
-        filtValGenSeed = None
-        filtSizeGenSeed = None
+    swngSeed = None
+    if random is False:
+        swngSeed = 0
 
     #CONVOLUTIONAL EXTRACTOR
     #Filter generator
-    #--Value
-    filterGenPolicy, filterGenParam = filterGenConfiguration
-    if filterGenPolicy == Const.GEN_REAL:
-        filterMinVal, filterMaxVal = filterGenParam
-        filterValGenerator = NumberGenerator(filterMinVal, filterMaxVal,
-                                             seed=filtValGenSeed)
-    if filterGenPolicy == Const.GEN_SET:
-        filterValGenerator = CustomDiscreteNumberGenerator(filterGenParam,
-                                                           seed=filtValGenSeed)
-    #--Size
-    filterSizeGenerator = OddUniformGenerator(filterMinSize, filterMaxSize,
-                                              seed=filtSizeGenSeed)
-    baseFilterGenerator = FilterGenerator(filterValGenerator,
-                                          filterSizeGenerator,
-                                          normalisation=filterNormalisation)
-    filterGenerator = Finite3SameFilter(baseFilterGenerator, nbFilters)
+    #Type/policy parameters, #filters, random
+    filterPolicyType, filterPolicyParam = filterPolicy
+    filterGenerator = getFilterGenerator(filterPolicyType, filterPolicyParam,
+                                         nbFilters, random)
 
     #Convolver
     convolver = RGBConvolver()
 
     #Aggregator
-    poolers = []
-    for height, width, policy in poolings:
-        if policy == Const.POOLING_NONE:
-            poolers.append(IdentityPooler())
-        elif policy == Const.POOLING_AGGREG_AVG:
-            poolers.append(AverageAggregator(width, height,
-                                             subwindowTargetWidth,
-                                             subwindowTargetHeight))
-        elif policy == Const.POOLING_AGGREG_MAX:
-            poolers.append(MaximumAggregator(width, height,
-                                             subwindowTargetWidth,
-                                             subwindowTargetHeight))
-        elif policy == Const.POOLING_AGGREG_MIN:
-            poolers.append(MinimumAggregator(width, height,
-                                             subwindowTargetWidth,
-                                             subwindowTargetHeight))
-        elif policy == Const.POOLING_CONV_MIN:
-            poolers.append(ConvMinPooler(height, width))
-        elif policy == Const.POOLING_CONV_AVG:
-            poolers.append(ConvAvgPooler(height, width))
-        elif policy == Const.POOLING_CONV_MAX:
-            poolers.append(ConvMaxPooler(height, width))
-
-    multiPooler = MultiPooler(poolers)
+    multiPooler = getMultiPoolers(poolings, subwindowTargetHeight,
+                                  subwindowTargetWidth)
 
     #SubWindowExtractor
     swNumGenerator = NumberGenerator(seed=swngSeed)
@@ -335,7 +412,7 @@ def coordinatorRandConvFactory(
     featureExtractor = ImageLinearizationExtractor()
 
     #LOGGER
-    autoFlush = verbosity >= 45
+    autoFlush = verbosity >= 40
     logger = ProgressLogger(StandardLogger(autoFlush=autoFlush,
                                            verbosity=verbosity))
     #COORDINATOR
@@ -458,7 +535,7 @@ def customRandConvFactory(
         elif policy == Const.POOLING_CONV_MAX:
             poolers.append(ConvMaxPooler(height, width))
 
-    multiPooler = MultiPooler(poolers)
+    multiPooler = getMultiPoolers(subwindowTargetHeight, subwindowTargetWidth)
 
     #SubWindowExtractor
     swNumGenerator = NumberGenerator(seed=swngSeed)

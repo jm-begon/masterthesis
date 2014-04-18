@@ -10,7 +10,7 @@ from math import sqrt
 
 from FilterGenerator import Finite3SameFilter
 
-__all__ = ["customFinite3sameFilter"]
+__all__ = ["customFilters", "customFinite3sameFilter"]
 
 
 def shape2D(squareIterable, normalisation=None):
@@ -48,7 +48,7 @@ def shape2D(squareIterable, normalisation=None):
     return filt
 
 
-def customFinite3sameFilter():
+def customFilters():
     filters = []
 
     centralEmphasis = shape2D([0.075, 0.125, 0.075, 0.125, 0.2, 0.125,
@@ -190,7 +190,11 @@ def customFinite3sameFilter():
     misc7 = shape2D([2, -1, -1, -1, 2, -1, -1, -1, 2])
     filters.append(misc7)
 
-    return Finite3SameFilter(filters)
+    return filters
+
+
+def customFinite3sameFilter():
+    return Finite3SameFilter(customFilters())
 
 
 if __name__ == "__main__":

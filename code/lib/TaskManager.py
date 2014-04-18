@@ -5,13 +5,14 @@
 Several tools for parallel computation
 """
 from abc import ABCMeta, abstractmethod
-
+import numpy as np
 import copy_reg
 import types
 
 
 from sklearn.externals.joblib import Parallel, delayed, cpu_count
 from Logger import Progressable
+from NumpyFactory import NumpyFactory
 
 __all__ = ["TaskSplitter", "TaskExecutor", "SerialExecutor",
            "ParallelExecutor"]
@@ -90,19 +91,22 @@ class TaskSplitter:
 
         Return
         ------
-        pair = (nbTasks, dataParts)
+        tuple = (nbTasks, dataParts, starts)
         nbTasks : int
             The final parallelization factor. It is computed as
             min(#cpu/nbTasks, dataSize)
-        dataParts : list of lists
-            each element of dataParts is a contiguous sublist of data : the
+        dataParts : list of slices
+            each element of dataParts is a contiguous slice of data : the
             partition for a parallel computation unit
+        starts : list of int
+            The start indices corresponding to the dataParts :
+            dataParts[i] = data[starts[i]:starts[i+1]
         """
         nbTasks, counts, starts = self.computePartition(nbTasks, len(data))
         dataParts = []
         for i in xrange(nbTasks):
             dataParts.append(data[starts[i]:starts[i + 1]])
-        return nbTasks, dataParts
+        return nbTasks, dataParts, starts
 
 
 class TaskExecutor(Progressable):
@@ -147,10 +151,56 @@ class TaskExecutor(Progressable):
         """
         pass
 
+    @abstractmethod
+    def executeWithStart(self, descr, function, data, *args, **kwargs):
+        """
+        Get the result of the task directly. The difference with meth:`execute`
+        comes from the function signature, which now must have a dedicated
+        keyword argument "startIndex" which indicates the start index of the
+        data slice on which the function is called
+
+        Parameters
+        ----------
+        desc : str
+            A string describing the task
+        function : callable : f(...startIndex,...)
+            The function to process the task. The function must be able to
+            work on any subset of the data and must have a dedicated keyword
+            argument "startIndex" which indicates the start index of the data
+            slice on which the function is called
+        data : an iterable of piece of data
+            The data to process
+        args : iterable
+            Parameters to pass to the function
+        kwargs: dictionnary
+            Keyword parameters to pass to the function
+
+        Return
+        ------
+        ls : iterable of results
+            each individual result is the execution of the function on a given
+            subset of the data. The caller must aggregate the result accordinly
+        """
+        pass
+
     def __call__(self, descr, function, data, *args, **kwargs):
         """Delegate to :meth:`execute`"""
         return self.execute(descr, function, data, *args, **kwargs)
 
+    @abstractmethod
+    def createArray(self, shape, dtype):
+        """
+        Return
+        ------
+        array : numpy array
+            An empty (zero-filled) numpy array of given shape and dtype,
+            modifiable on place by the function used with :meth:`execute`
+        """
+        pass
+
+    @abstractmethod
+    def clean(self, array):
+        pass
 
 class SerialExecutor(TaskExecutor):
     """
@@ -177,6 +227,25 @@ class SerialExecutor(TaskExecutor):
         self.endTask()
         return ls
 
+    def executeWithStart(self, desc, function, data, *args, **kwargs):
+        self.setTask(1, desc)
+        if len(args) == 0:
+            if len(kwargs) == 0:
+                ls = [function(data, startIndex=0)]
+            else:
+                ls = [function(data, startIndex=0, *kwargs)]
+        elif len(kwargs) == 0:
+            ls = [function(data, startIndex=0, *args)]
+        else:
+            ls = [function(data, startIndex=0, *args, **kwargs)]
+        self.endTask()
+        return ls
+
+    def createArray(self, shape, dtype):
+        return np.zeros(shape, dtype)
+
+    def clean(self, array):
+        pass
 
 class ParallelExecutor(TaskExecutor):
     """
@@ -190,11 +259,12 @@ class ParallelExecutor(TaskExecutor):
         TaskExecutor.__init__(self, logger, verbosity)
         self._nbParal = nbParal
         self._tmpFolder = tempFolder
+        self._numpyFactory = NumpyFactory(tempFolder)
 
     def execute(self, desc, function, data, *args, **kwargs):
         #Splitting task
-        taskSplitter = TaskSplitter()
-        nbJobs, splittedData = taskSplitter.partition(self._nbParal, data)
+        tSplitter = TaskSplitter()
+        nbJobs, splittedData, starts = tSplitter.partition(self._nbParal, data)
 
         #Logging
         self.setTask(1, ("Starting parallelization : "+desc))
@@ -220,6 +290,47 @@ class ParallelExecutor(TaskExecutor):
 
         return allData
 
+    def executeWithStart(self, desc, function, data, *args, **kwargs):
+        #Splitting task
+        tSplitter = TaskSplitter()
+        nbJobs, splittedData, starts = tSplitter.partition(self._nbParal, data)
+
+        #Logging
+        self.setTask(1, ("Starting parallelization : "+desc))
+
+        #Parallelization
+        parallelizer = Parallel(n_jobs=nbJobs, temp_folder=self._tmpFolder,
+                                verbose=self.verbosity,)
+
+        if len(args) == 0:
+            if len(kwargs) == 0:
+                allData = parallelizer(delayed(function)(
+                    splittedData[i], startIndex=starts[i])
+                    for i in xrange(nbJobs))
+            else:
+                allData = parallelizer(delayed(function)(
+                    splittedData[i], startIndex=starts[i], **kwargs)
+                    for i in xrange(nbJobs))
+
+        elif len(kwargs) == 0:
+            allData = parallelizer(delayed(function)(
+                splittedData[i], startIndex=starts[i], *args)
+                for i in xrange(nbJobs))
+
+        else:
+            allData = parallelizer(delayed(function)(
+                splittedData[i], startIndex=starts[i], *args, **kwargs)
+                for i in xrange(nbJobs))
+
+        self.endTask()
+
+        return allData
+
+    def createArray(self, shape, dtype):
+        self._numpyFactory.createArray(shape, dtype)
+
+    def clean(self, array):
+        self._numpyFactory.clean(array)
 
 #class ParallelCoordinator(Coordinator):
 #    """
