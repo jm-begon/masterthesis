@@ -185,19 +185,19 @@ def getMultiPoolers(poolings, finalHeight, finalWidth):
     return MultiPooler(poolers)
 
 
-def getNumberGenerator(genType, minVal, maxVal, seed, **kwargs):
+def getNumberGenerator(genType, minValue, maxValue, seed, **kwargs):
     if genType is Const.RND_RU:
-        valGenerator = NumberGenerator(minVal, maxVal, seed)
+        valGenerator = NumberGenerator(minValue, maxValue, seed)
     elif genType is Const.RND_SET:
         probLaw = kwargs["probLaw"]
         valGenerator = CustomDiscreteNumberGenerator(probLaw, seed)
     elif genType is Const.RND_GAUSS:
         if "outRange" in kwargs:
             outRange = kwargs["outRange"]
-            valGenerator = GaussianNumberGenerator(minVal, maxVal, seed,
+            valGenerator = GaussianNumberGenerator(minValue, maxValue, seed,
                                                    outRange)
         else:
-            valGenerator = GaussianNumberGenerator(minVal, maxVal, seed)
+            valGenerator = GaussianNumberGenerator(minValue, maxValue, seed)
     return valGenerator
 
 
@@ -235,7 +235,7 @@ def getFilterGenerator(policy, parameters, nbFilters, random=False):
     maxVal = parameters["maxVal"]
     valGen = parameters["valGen"]
     valGenerator = getNumberGenerator(valGen, minVal, maxVal,
-                                      valSeed, parameters)
+                                      valSeed, **parameters)
 
     normalization = None
     if "normalization" in parameters:
@@ -283,7 +283,10 @@ def getFilterGenerator(policy, parameters, nbFilters, random=False):
 
 def coordinatorRandConvFactory(
         nbFilters=5,
-        filterPolicy,
+        filterPolicy=(Const.FGEN_ZEROPERT,
+                      {"minSize": 2, "maxSize": 32, "minVal": -1, "maxVal": 1,
+                       "valGen": Const.RND_RU,
+                       "normalization": FilterGenerator.NORMALISATION_MEANVAR}),
         poolings=[(3, 3, Const.POOLING_AGGREG_AVG)],
         nbSubwindows=10,
         subwindowMinSizeRatio=0.5, subwindowMaxSizeRatio=1.,
