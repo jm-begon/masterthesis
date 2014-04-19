@@ -329,7 +329,7 @@ class ParallelExecutor(TaskExecutor):
         return allData
 
     def createArray(self, shape, dtype=float):
-        self._numpyFactory.createArray(shape, dtype)
+        return self._numpyFactory.createArray(shape, dtype)
 
     def clean(self, array):
         self._numpyFactory.clean(array)

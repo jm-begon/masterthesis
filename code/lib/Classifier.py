@@ -117,6 +117,9 @@ class Classifier(Progressable):
 
         self.endTask()
 
+        #Cleaning up
+        self._coord.clean(X, y)
+
         return self
 
     def predict(self, image_buffer):

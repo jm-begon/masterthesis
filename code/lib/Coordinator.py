@@ -11,8 +11,8 @@ import numpy as np
 
 from Logger import Progressable
 from TaskManager import SerialExecutor, ParallelExecutor
+from Rescaler import Rescaler, MaxoutRescaler
 from NumpyToPILConvertor import NumpyPILConvertor
-from NumpyFactory import NumpyFactory
 
 __all__ = ["PixitCoordinator", "RandConvCoordinator",
            "CompressRandConvCoordinator", "LoadCoordinator"]
@@ -35,10 +35,16 @@ class Coordinator(Progressable):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, logger=None, verbosity=None):
+    def __init__(self, logger=None, verbosity=None, dtype=np.float,
+                 labeltype=np.uint8):
         Progressable.__init__(self, logger, verbosity)
         self._exec = SerialExecutor(logger, verbosity)
-        self._npCreator = NumpyFactory()
+        self._dtype = dtype
+        self._labeltype = labeltype
+        if dtype is np.float:
+            self._rescaler = Rescaler()
+        else:
+            self._rescaler = MaxoutRescaler(dtype)
 
     def parallelize(self, nbJobs=-1, tempFolder=None):
         """
@@ -98,16 +104,16 @@ class Coordinator(Progressable):
         nbFeatures = self.nbFeaturesPerObject(self._nbColors)
         nbObjs = self.nbObjects(imageBuffer)
 
-        X = self._exec.createArray((nbObjs, nbFeatures))
-        y = self._exec.createArray((nbObjs))
+        X = self._exec.createArray((nbObjs, nbFeatures), self._dtype)
+        y = self._exec.createArray((nbObjs), self._labeltype)
 
         self._exec.executeWithStart("Extracting features",
                                     self._onProcess, imageBuffer,
                                     learningPhase=learningPhase,
                                     XResult=X, yResult=y)
 
-        self._exec.clean(X)
-        self._exec.clean(y)
+#        self._exec.clean(X)
+#        self._exec.clean(y)
         return X, y
 
     @abstractmethod
@@ -147,6 +153,12 @@ class Coordinator(Progressable):
     def __call__(self, imageBuffer, learningPhase):
         """Delegate to :meth:`process`"""
         return self.process(imageBuffer, learningPhase)
+
+    def clean(self, *args):
+        self.setTask(1, "Cleaning up")
+        for resource in args:
+            self._exec.clean(resource)
+        self.endTask()
 
     @abstractmethod
     def nbFeaturesPerObject(self, nbColors=1):
@@ -253,8 +265,10 @@ class PixitCoordinator(Coordinator):
             imgLs = self._multiSWExtractor.extract(image)
             #Filling the X and y
             for img in imgLs:
-                XResult[index] = self._featureExtractor.extract(
+                tmpRes = self._featureExtractor.extract(
                     convertor.pILToNumpy(img))
+                for col, val in enumerate(tmpRes):
+                    XResult[index, col] = self._rescaler(val)
                 yResult[index] = label
                 index += 1
             #Logging progress
@@ -337,7 +351,7 @@ class RandConvCoordinator(Coordinator):
                     #Extracting the features for each filter
                     filter_feature = self._featureExtractor.extract(filtered)
                     for val in filter_feature:
-                        XResult[row, column] = val
+                        XResult[row, column] = self._rescaler(val)
                         column += 1
 
                 #Corresponding label

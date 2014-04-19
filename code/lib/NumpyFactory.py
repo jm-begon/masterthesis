@@ -47,7 +47,7 @@ class NumpyFactory:
         c = NumpyFactory.counter
         NumpyFactory.counter += 1
 
-        filePath = os.path.join(self._temp_folder, "f"+str(c))
+        filePath = os.path.join(self._temp_folder, "f"+str(c)+".dat")
         array = np.memmap(filePath, dtype=dtype, shape=shape, mode='r+')
         self._files[id(array)] = filePath
         return array
