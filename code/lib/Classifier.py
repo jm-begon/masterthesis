@@ -5,6 +5,7 @@
 import numpy as np
 
 from sklearn.metrics import confusion_matrix
+from sklearn.ensemble import RandomTreesEmbedding
 
 from Logger import Progressable
 
@@ -221,3 +222,171 @@ class Classifier(Progressable):
             The confusion matrix
         """
         return confusion_matrix(y_truth, y_pred)
+
+
+class UnsupervisedVisualBagClassifier(Classifier):
+    """
+    ===============================
+    UnsupervisedVisualBagClassifier
+    ===============================
+    1. Unsupervised
+    2. Binary bag of words
+    3. Totally random trees
+    """
+
+    def __init__(self, coordinator, base_classifier, n_estimators=10,
+                 max_depth=5, min_samples_split=2, min_samples_leaf=1,
+                 n_jobs=-1, random_state=None, verbose=0, min_density=None):
+        Classifier.__init__(self, coordinator, base_classifier)
+        self._visualBagger = RandomTreesEmbedding(n_estimators, max_depth,
+                                                  min_samples_split,
+                                                  min_samples_leaf,
+                                                  n_jobs, random_state,
+                                                  verbose, min_density)
+
+    def fit(self, image_buffer):
+        """
+        Fits the data contained in the :class:`ImageBuffer` instance
+
+        Parameters
+        -----------
+        image_buffer : :class:`ImageBuffer`
+            The data to learn from
+
+        Return
+        -------
+        self : :class:`Classifier`
+            This instance
+        """
+        #Updating the labels
+        y_user = image_buffer.getLabels()
+        self._buildLUT(y_user)
+
+        #Extracting the features
+        self.setTask(1, "Extracting the features (model creation)")
+
+        X, y_user = self._coord.process(image_buffer, learningPhase=True)
+
+        self.endTask()
+
+        #Converting the labels
+        y = self._convertLabel(y_user)
+
+        #Bag-of-word transformation
+        self.setTask(1, "Transforming data into bag-of-words")
+
+        X2 = self._visualBagger.fit_transform(X, y)
+        height = len(image_buffer)
+        width = X2.shape[1]
+        nbFactor = X.shape[0] // height
+
+        X3 = np.zeros((height, width), np.uint32)
+        startIndex = 0
+        endIndex = startIndex + nbFactor
+        for row in xrange(height):
+            X3[row] = X2[startIndex, endIndex].sum(axis=0)
+            startIndex = endIndex
+            endIndex = startIndex + nbFactor
+
+        self.endTask()
+
+        #Delegating the classification
+        self.setTask(1, "Learning the model")
+
+        self._classifier.fit(X3, y)
+
+        self.endTask()
+
+        #Cleaning up
+        self._coord.clean(X, y)
+
+        return self
+
+    def predict(self, image_buffer):
+        """
+        Classify the data contained in the :class:`ImageBuffer` instance
+
+        Parameters
+        -----------
+        image_buffer : :class:`ImageBuffer`
+            The data to classify
+
+        Return
+        -------
+        list : list of int
+            each entry is the classification label corresponding to the input
+        """
+        self.setTask(1, "Extracting the features (prediction)")
+
+        X_pred, _ = self._coord.process(image_buffer, learningPhase=False)
+
+        self.endTask()
+
+        #Bag-of-word transformation
+        self.setTask(1, "Transforming data into bag-of-words")
+
+        X2 = self._visualBagger.transform(X_pred)
+        height = len(image_buffer)
+        width = X2.shape[1]
+        nbFactor = X_pred.shape[0] // height
+
+        X3 = np.zeros((height, width), np.uint32)
+        startIndex = 0
+        endIndex = startIndex + nbFactor
+        for row in xrange(height):
+            X3[row] = X2[startIndex, endIndex].sum(axis=0)
+            startIndex = endIndex
+            endIndex = startIndex + nbFactor
+
+        self.endTask()
+
+        y_classif = self._classifier.predict(X3)
+        return self._convertLabelsBackToUser(y_classif)
+
+    def predict_proba(self, image_buffer):
+        """
+        Classify softly the data contained is the :class:`ImageBuffer`
+        instance. i.e. yields a probability vector of belongin to each
+        class
+
+        Parameters
+        -----------
+        image_buffer : :class:`ImageBuffer`
+            The data to classify
+
+        Return
+        -------
+        list : list of list of float
+            each entry is the probability vector of the input of the same
+            index as computed by the base classifier
+        """
+        if not hasattr(self._classifier, "predict_proba"):
+            #Early error
+            self._classifier.predict_proba(np.zeros((1, 1)))
+
+        #Extracting the features
+        self.setTask(1, "Extracting the features (prediction)")
+
+        X_pred, _ = self._coord.process(image_buffer, learningPhase=False)
+
+        self.endTask()
+
+        #Bag-of-word transformation
+        self.setTask(1, "Transforming data into bag-of-words")
+
+        X2 = self._visualBagger.transform(X_pred)
+        height = len(image_buffer)
+        width = X2.shape[1]
+        nbFactor = X_pred.shape[0] // height
+
+        X3 = np.zeros((height, width), np.uint32)
+        startIndex = 0
+        endIndex = startIndex + nbFactor
+        for row in xrange(height):
+            X3[row] = X2[startIndex, endIndex].sum(axis=0)
+            startIndex = endIndex
+            endIndex = startIndex + nbFactor
+
+        self.endTask()
+
+        return self._classifier.predict_proba(X3)
