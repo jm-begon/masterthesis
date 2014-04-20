@@ -212,6 +212,10 @@ def getFilterGenerator(policy, parameters, nbFilters, random=False):
                                          subNbFilters, random))
         return OrderedMFF(ls, nbFilters)
 
+    if policy is Const.FGEN_CUSTOM:
+        print "Custom filters"
+        return customFinite3sameFilter()
+
     #Parameters is a dictionary
     valSeed = None
     sizeSeed = None
@@ -245,10 +249,7 @@ def getFilterGenerator(policy, parameters, nbFilters, random=False):
         print "Zero perturbation filters"
         baseFilterGenerator = FilterGenerator(valGenerator, sizeGenerator,
                                               normalisation=normalization)
-    elif policy is Const.FGEN_CUSTOM:
-        print "Custom filters"
-        baseFilterGenerator = customFilters()
-        nbFilters = None
+
     elif policy is Const.FGEN_IDPERT:
         print "Id perturbation filters"
         baseFilterGenerator = IdPerturbatedFG(valGenerator, sizeGenerator,
