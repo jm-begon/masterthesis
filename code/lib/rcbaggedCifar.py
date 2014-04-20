@@ -5,7 +5,6 @@
 A script to run the random and convolution classifcation
 """
 import sys
-import os
 from time import time
 
 from sklearn.svm import LinearSVC
@@ -22,13 +21,15 @@ from ImageBuffer import FileImageBuffer, NumpyImageLoader
 #----RandConv param
 #Filtering
 nb_filters = 100
-filterPolicy = (Const.FGEN_ZEROPERT, {"minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_RU, "normalization":FilterGenerator.NORMALISATION_MEANVAR})
+filterPolicy = (Const.FGEN_CUSTOM, {"normalization":FilterGenerator.NORMALISATION_NONE})
+#filterPolicy = (Const.FGEN_ZEROPERT, {"minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_RU, "normalization":FilterGenerator.NORMALISATION_MEANVAR})
 #filterPolicy = (Const.FGEN_ZEROPERT, {"minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_SET, "probLaw":[(-1, 0.3), (0, 0.4), (1, 0.3)], "normalization":FilterGenerator.NORMALISATION_MEANVAR})
 #filterPolicy = (Const.FGEN_IDPERT, {"minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_RU})
 #filterPolicy = (Const.FGEN_IDPERT, {"minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_GAUSS, "outRange":0.05})
 #filterPolicy = (Const.FGEN_IDDIST, {"minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_RU, "maxDist":5})
 #filterPolicy = (Const.FGEN_STRAT, {"minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_GAUSS,  "outRange":0.001, "strat_nbCells":10, "minPerturbation":minPerturbation, "maxPerturbation":maxPerturbation})
 #
+#filterPolicy = (Const.FGEN_ZEROPERT, {"sparseProb":0.25, "minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_RU, "normalization":FilterGenerator.NORMALISATION_MEANVAR})
 #filterPolicy = (Const.FGEN_ZEROPERT, {"sparseProb":0.25, "minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_RU, "normalization":FilterGenerator.NORMALISATION_MEANVAR})
 #filterPolicy = (Const.FGEN_ZEROPERT, {"sparseProb":0.25, "minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_SET, "probLaw":[(-1, 0.3), (0, 0.4), (1, 0.3)], "normalization":FilterGenerator.NORMALISATION_MEANVAR})
 #filterPolicy = (Const.FGEN_IDPERT, {"sparseProb":0.25, "minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_RU})
@@ -37,23 +38,23 @@ filterPolicy = (Const.FGEN_ZEROPERT, {"minSize":2, "maxSize":32, "minVal":-1, "m
 #filterPolicy = (Const.FGEN_STRAT, {"sparseProb":0.25, "minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_GAUSS,  "outRange":0.001, "strat_nbCells":10, "minPerturbation":minPerturbation, "maxPerturbation":maxPerturbation})
 
 #Aggregation
-poolings = [(2, 2, Const.POOLING_AGGREG_AVG)]
+poolings = [(2, 2, Const.POOLING_MW_AVG)]
 
 #Subwindow
-nbSubwindows = 10
+nbSubwindows = 20
 subwindowMinSizeRatio = 0.75
 subwindowMaxSizeRatio = 1.
 subwindowTargetWidth = 16
 subwindowTargetHeight = 16
 fixedSize = False
-subwindowInterpolation = SubWindowExtractor.INTERPOLATION_BILINEAR
+subwindowInterpolation = SubWindowExtractor.INTERPOLATION_NEAREST
 
 #Misc.
 includeOriginalImage = True
 random = False
-nbJobs = 1
+nbJobs = -1
 verbosity = 8
-tempFolder = "tmp/"
+tempFolder = "/dev/shm"
 
 #-----BagOfWords params + some SVC params
 nbTrees = 30
@@ -112,8 +113,7 @@ def run(nb_filters=nb_filters,
         tsSize = maxTestingSize
 
     #======INSTANTIATING========#
-    os.environ["JOBLIB_TEMP_FOLDER"] = "/home/jmbegon/jmbegon/code/work/tmp/"
-    #--Pixit--
+    #--randconv--
     randConvCoord = coordinatorRandConvFactory(
         nbFilters=nb_filters,
         filterPolicy=filterPolicy,
@@ -129,6 +129,8 @@ def run(nb_filters=nb_filters,
         verbosity=verbosity,
         tempFolder=tempFolder,
         random=random)
+
+    nb_filters = len(randConvCoord.getFilters())
 
     #--Extra-tree--
     baseClassif = LinearSVC(verbose=verbose, random_state=randomState)
@@ -171,9 +173,9 @@ def run(nb_filters=nb_filters,
     confMat = classifier.confusionMatrix(y_pred, y_truth)
 
     #====ANALYSIS=====#
-    importance, order = randConvCoord.importancePerFeatureGrp(baseClassif)
+    importance, order = randConvCoord.importancePerFeatureGrp(classifier._visualBagger)
 
-    print "========================================="
+    print "==================Bag of Visual Words======================="
     print "-----------Filtering--------------"
     print "nb_filters", nb_filters
     print "filterPolicy", filterPolicy

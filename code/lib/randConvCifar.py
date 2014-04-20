@@ -5,7 +5,6 @@
 A script to run the random and convolution classifcation
 """
 import sys
-import os
 from time import time
 
 from sklearn.ensemble import ExtraTreesClassifier
@@ -53,7 +52,7 @@ includeOriginalImage = True
 random = False
 nbJobs = 1
 verbosity = 8
-tempFolder = "tmp/"
+tempFolder = "/dev/shm"
 
 #-----Extratree param
 nbTrees = 30
@@ -117,8 +116,7 @@ def run(nb_filters=nb_filters,
         tsSize = maxTestingSize
 
     #======INSTANTIATING========#
-    os.environ["JOBLIB_TEMP_FOLDER"] = "/home/jmbegon/jmbegon/code/work/tmp/"
-    #--Pixit--
+    #--Randconv--
     randConvCoord = coordinatorRandConvFactory(
         nbFilters=nb_filters,
         filterPolicy=filterPolicy,
@@ -178,7 +176,7 @@ def run(nb_filters=nb_filters,
     #====ANALYSIS=====#
     importance, order = randConvCoord.importancePerFeatureGrp(baseClassif)
 
-    print "========================================="
+    print "==================RandConv======================="
     print "-----------Filtering--------------"
     print "nb_filters", nb_filters
     print "filterPolicy", filterPolicy
