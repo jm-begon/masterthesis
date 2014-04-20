@@ -249,11 +249,14 @@ class UnsupervisedVisualBagClassifier(Classifier):
                  max_depth=5, min_samples_split=2, min_samples_leaf=1,
                  n_jobs=-1, random_state=None, verbose=0, min_density=None):
         Classifier.__init__(self, coordinator, base_classifier)
-        self._visualBagger = RandomTreesEmbedding(n_estimators, max_depth,
-                                                  min_samples_split,
-                                                  min_samples_leaf,
-                                                  n_jobs, random_state,
-                                                  verbose, min_density)
+        self._visualBagger = RandomTreesEmbedding(n_estimators=n_estimators,
+                                                  max_depth=max_depth,
+                                                  min_samples_split=min_samples_split,
+                                                  min_samples_leaf=min_samples_leaf,
+                                                  n_jobs=n_jobs,
+                                                  random_state=random_state,
+                                                  verbose=verbose,
+                                                  min_density=min_density)
 
     def fit(self, image_buffer):
         """
