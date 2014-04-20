@@ -134,7 +134,9 @@ def run(nb_filters=nb_filters,
     baseClassif = LinearSVC(verbose=verbose, random_state=randomState)
 
     #--Classifier
-    classifier = uClassifier(randConvCoord, baseClassif, nbTrees,
+    classifier = uClassifier(coordinator=randConvCoord,
+                             base_classifier=baseClassif,
+                             n_estimators=nbTrees,
                              max_depth=maxDepth,
                              min_samples_split=minSamplesSplit,
                              min_samples_leaf=minSamplesLeaf,
