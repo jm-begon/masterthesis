@@ -12,11 +12,11 @@ class Rescaler:
     def __init__(self):
         pass
 
-    def rescale(self, val):
-        return val
+    def rescale(self, array):
+        return array
 
-    def __call__(self, val):
-        return self.rescale(val)
+    def __call__(self, array):
+        return self.rescale(array)
 
 
 class MaxoutRescaler(Rescaler):
@@ -28,12 +28,6 @@ class MaxoutRescaler(Rescaler):
             info = np.finfo(dtype)
         self._min = info.min
         self._max = info.max
-        self._buffer = np.zeros((1), dtype)
 
-    def rescale(self, val):
-        if val < self._min:
-            return self._min
-        if val > self._max:
-            return self._max
-        self._buffer[0] = val
-        return self._buffer[0]
+    def rescale(self, array):
+        return array.clip(self._min, self._max)
