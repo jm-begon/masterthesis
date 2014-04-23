@@ -19,6 +19,11 @@ def delete_folder(folder_path):
         shutil.rmtree(folder_path)
 
 
+def delete_file(filepath):
+    if os.path.exists(filepath):
+        os.remove(filepath)
+
+
 class NumpyFactory:
 #Heavily based on joblib
 
@@ -49,19 +54,26 @@ class NumpyFactory:
 
         filePath = os.path.join(self._temp_folder, "f"+str(c)+".dat")
         array = np.memmap(filePath, dtype=dtype, shape=shape, mode='w+')
-        self._files[id(array)] = filePath
+        self._files[array.filename] = id(array)
+
         return array
 
     def clean(self, array):
-        if not self._files.has_key:
+        if not hasattr(array, "filename"):
+            return False
+        if hasattr(array, "size") and hasattr(array, "itemsize"):  #TODO XXX r
+            print "NumpyFactory.clean : numpy array", str(array.size * array.itemsize)
+
+        if not self._files.has_key(array.filename):
+            print "NumpyFactory.clean : array not known"  # TODO XXX remove
             return False
         # TODO XXX : manage exceptions
         try:
-            filePath = self._files[id(array)]
-            delete_folder(filePath)
+            filePath = array.filename
+            delete_file(filePath)
             del self._files[filePath]
         except:
-            print "Unexpected error:", sys.exc_info()[0]
+            print "NumpyFactory.clean Unexpected error:", sys.exc_info()
             return False
         return True
 

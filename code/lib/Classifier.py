@@ -119,7 +119,7 @@ class Classifier(Progressable):
         self.endTask()
 
         #Cleaning up
-        self._coord.clean(X, y)
+        self._coord.clean(X, y_user)
 
         return self
 
@@ -275,17 +275,16 @@ class UnsupervisedVisualBagClassifier(Classifier):
         #Updating the labels
         y_user = image_buffer.getLabels()
         self._buildLUT(y_user)
-        y_user = self._convertLabel(y_user)
 
         #Extracting the features
         self.setTask(1, "Extracting the features (model creation)")
 
-        X, y = self._coord.process(image_buffer, learningPhase=True)
+        X, y_user = self._coord.process(image_buffer, learningPhase=True)
 
         self.endTask()
 
         #Converting the labels
-        y = self._convertLabel(y)
+        y = self._convertLabel(y_user)
 
         #Bag-of-word transformation
         self.setTask(1, "Transforming data into bag-of-words")
@@ -293,9 +292,9 @@ class UnsupervisedVisualBagClassifier(Classifier):
         X2 = self._visualBagger.fit_transform(X, y)
 
         #Cleaning up
-        self._coord.clean(X, y)
+        self._coord.clean(X, y_user)
         del X
-        del y
+        del y_user
 
         height = len(image_buffer)
         width = X2.shape[1]
@@ -314,7 +313,7 @@ class UnsupervisedVisualBagClassifier(Classifier):
         #Delegating the classification
         self.setTask(1, "Learning the model")
 
-        self._classifier.fit(X3, y_user)
+        self._classifier.fit(X3, y)
 
         self.endTask()
 
@@ -361,7 +360,7 @@ class UnsupervisedVisualBagClassifier(Classifier):
         startIndex = 0
         endIndex = startIndex + nbFactor
         for row in xrange(height):
-            X3[row] = X2[startIndex, endIndex].sum(axis=0)
+            X3[row] = X2[startIndex:endIndex].sum(axis=0)
             startIndex = endIndex
             endIndex = startIndex + nbFactor
 
@@ -419,7 +418,7 @@ class UnsupervisedVisualBagClassifier(Classifier):
         startIndex = 0
         endIndex = startIndex + nbFactor
         for row in xrange(height):
-            X3[row] = X2[startIndex, endIndex].sum(axis=0)
+            X3[row] = X2[startIndex:endIndex].sum(axis=0)
             startIndex = endIndex
             endIndex = startIndex + nbFactor
 

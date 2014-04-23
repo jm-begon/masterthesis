@@ -267,8 +267,7 @@ class PixitCoordinator(Coordinator):
             for img in imgLs:
                 tmpRes = self._featureExtractor.extract(
                     convertor.pILToNumpy(img))
-                for col, val in enumerate(tmpRes):
-                    XResult[index, col] = self._rescaler(val)
+                XResult[index] = self._rescaler(tmpRes)
                 yResult[index] = label
                 index += 1
             #Logging progress
@@ -348,11 +347,11 @@ class RandConvCoordinator(Coordinator):
                 #Accessing each filter separately for a given subwindow
                 column = 0
                 for filtered in filteredList:
+
                     #Extracting the features for each filter
                     filter_feature = self._featureExtractor.extract(filtered)
-                    for val in filter_feature:
-                        XResult[row, column] = self._rescaler(val)
-                        column += 1
+                    XResult[row, column:len(filter_feature)]
+                    column = len(filter_feature)
 
                 #Corresponding label
                 yResult[row] = label
