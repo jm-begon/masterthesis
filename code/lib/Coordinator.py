@@ -35,7 +35,7 @@ class Coordinator(Progressable):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, logger=None, verbosity=None, dtype=np.float,
+    def __init__(self, logger=None, verbosity=None, dtype=np.uint8,
                  labeltype=np.uint8):
         Progressable.__init__(self, logger, verbosity)
         self._exec = SerialExecutor(logger, verbosity)
@@ -107,13 +107,15 @@ class Coordinator(Progressable):
         X = self._exec.createArray((nbObjs, nbFeatures), self._dtype)
         y = self._exec.createArray((nbObjs), self._labeltype)
 
+        self.logMsg("X shape : "+str(X.shape), 35)
+        self.logMsg("X dtype : "+str(X.dtype), 35)
+        self.logSize("X total size : ", (X.size*X.itemsize), 35)
+
         self._exec.executeWithStart("Extracting features",
                                     self._onProcess, imageBuffer,
                                     learningPhase=learningPhase,
                                     XResult=X, yResult=y)
 
-#        self._exec.clean(X)
-#        self._exec.clean(y)
         return X, y
 
     @abstractmethod
@@ -350,8 +352,8 @@ class RandConvCoordinator(Coordinator):
 
                     #Extracting the features for each filter
                     filter_feature = self._featureExtractor.extract(filtered)
-                    XResult[row, column:len(filter_feature)]
-                    column = len(filter_feature)
+                    XResult[row, column:(column+len(filter_feature))] = filter_feature
+                    column += len(filter_feature)
 
                 #Corresponding label
                 yResult[row] = label

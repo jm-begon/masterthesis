@@ -11,7 +11,48 @@ import time
 from abc import ABCMeta, abstractmethod
 
 __all__ = ["Logger", "StandardLogger", "FileLogger", "ProgressLogger",
-           "Progressable"]
+           "Progressable", "formatDuration", "formatSize"]
+
+
+def formatDuration(duration):
+    """
+    Format the duration as string
+
+    Parameters
+    ----------
+    duration : float
+        a duration in seconds
+    Return
+    ------
+    formated : str
+        the given duration formated
+    """
+    sec = duration % 60
+    excess = int(duration) // 60  # minutes
+    res = str(sec) + "s"
+    if excess == 0:
+        return res
+    minutes = excess % 60
+    excess = excess // 60  # hours
+    res = str(minutes) + "m " + res
+    if excess == 0:
+        return res
+    hour = excess % 24
+    excess = excess // 24  # days
+    res = str(hour) + "h " + res
+    print "hours", hour
+    if excess == 0:
+        return res
+    res = str(excess)+"d " + res
+    return res
+
+
+def formatSize(nbBytes):
+    for x in ['bytes', 'kB', 'MB', 'GB']:
+        if nbBytes < 1000.0:
+            return "%3.1f %s" % (nbBytes, x)
+        nbBytes /= 1000.0
+    return "%3.1f %s" % (nbBytes, 'TB')
 
 
 class Logger:
@@ -78,6 +119,9 @@ class Logger:
             The minimum verbosity required to log this message
         """
         self.logMsg(errorMsg)
+
+    def logSize(self, message, nbBytes, minVerb=1):
+        self.logMsg(message+formatSize(nbBytes), minVerb=minVerb)
 
     def appendLN(self, msg):
         """
@@ -281,23 +325,6 @@ class ProgressableTask:
             return self._endTime - self._startTime
         else:
             return time.time() - self._startTime
-
-
-def formatDuration(duration):
-    """
-    Format the duration as string
-
-    Parameters
-    ----------
-    duration : float
-        a duration in seconds
-    Return
-    ------
-    formated : str
-        the given duration formated
-    """
-    return str(duration) + " s"  # TODO nice formating
-
 
 
 class ProgressLogger(Logger):
@@ -515,41 +542,42 @@ class Progressable(Logger):
         self._logger.logError(str(self)+" : "+msg, minVerb)
 
 if __name__ == "__main__":
-    import random as rd
-
-    verbosity = 20
-    t1max = 100
-    t2max = 89
-    t3max = 10
-
-    fLog = FileLogger(verbosity=verbosity)
-    logger = ProgressLogger(fLog)
-
-    id1 = logger.addTask(t1max, "t1")
-    id2 = logger.addTask(t2max, "t2")
-
-    t1 = 0
-    t2 = 0
-
-    for i in xrange(t1max+t2max-1):
-        if t1 == t1max-1 and t2 == t2max-1:
-            break
-        if t1 == t1max-1:
-            t2 += 1
-            logger.updateProgress(id2, t2)
-        elif t2 == t2max-1:
-            t1 += 1
-            logger.updateProgress(id1, t1)
-        else:
-            if rd.random() > .5:
-                t2 += 1
-                logger.updateProgress(id2, t2)
-            else:
-                t1 += 1
-                logger.updateProgress(id1, t1)
-
-    id3 = logger.addTask(t3max, "t3")
-    for i in xrange(t3max):
-        logger.updateProgress(id3, i)
-
-    print "=========DONE========"
+#    import random as rd
+#
+#    verbosity = 20
+#    t1max = 100
+#    t2max = 89
+#    t3max = 10
+#
+#    fLog = FileLogger(verbosity=verbosity)
+#    logger = ProgressLogger(fLog)
+#
+#    id1 = logger.addTask(t1max, "t1")
+#    id2 = logger.addTask(t2max, "t2")
+#
+#    t1 = 0
+#    t2 = 0
+#
+#    for i in xrange(t1max+t2max-1):
+#        if t1 == t1max-1 and t2 == t2max-1:
+#            break
+#        if t1 == t1max-1:
+#            t2 += 1
+#            logger.updateProgress(id2, t2)
+#        elif t2 == t2max-1:
+#            t1 += 1
+#            logger.updateProgress(id1, t1)
+#        else:
+#            if rd.random() > .5:
+#                t2 += 1
+#                logger.updateProgress(id2, t2)
+#            else:
+#                t1 += 1
+#                logger.updateProgress(id1, t1)
+#
+#    id3 = logger.addTask(t3max, "t3")
+#    for i in xrange(t3max):
+#        logger.updateProgress(id3, i)
+#
+#    print "=========DONE========"
+    pass

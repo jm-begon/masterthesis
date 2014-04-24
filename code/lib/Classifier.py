@@ -258,6 +258,61 @@ class UnsupervisedVisualBagClassifier(Classifier):
                                                   verbose=verbose,
                                                   min_density=min_density)
 
+    def _preprocess(self, image_buffer, learningPhase):
+        if learningPhase:
+            self.setTask(1, "Extracting the features (model creation)")
+        else:
+            self.setTask(1, "Extracting the features (prediction)")
+
+        X_pred, y = self._coord.process(image_buffer,
+                                        learningPhase=learningPhase)
+
+        y_user = self._convertLabel(y)
+
+        #Cleaning up
+        self._coord.clean(y)
+        del y
+
+        self.endTask()
+
+        #Bag-of-word transformation
+        self.setTask(1, "Transforming data into bag-of-words")
+
+        X2 = None
+        if learningPhase:
+            X2 = self._visualBagger.fit_transform(X_pred, y_user)
+        else:
+            X2 = self._visualBagger.transform(X_pred)
+
+        #Cleaning up
+        self._coord.clean(X_pred)
+        del X_pred
+        del y_user
+
+        height = len(image_buffer)
+        width = X2.shape[1]
+        nbFactor = X2.shape[0] // height
+
+        X3 = np.zeros((height, width), np.uint16)
+
+        self.logMsg("X3 shape : "+str(X3.shape), 35)
+        self.logMsg("X3 dtype : "+str(X3.dtype), 35)
+        self.logSize("X3 total size : ", (X3.size*X3.itemsize), 35)
+
+        startIndex = 0
+        endIndex = startIndex + nbFactor
+        for row in xrange(height):
+            X3[row] = X2[startIndex:endIndex].sum(axis=0)
+            startIndex = endIndex
+            endIndex = startIndex + nbFactor
+
+        #Cleaning up
+        del X2  # Should be useless
+
+        self.endTask()
+
+        return X3
+
     def fit(self, image_buffer):
         """
         Fits the data contained in the :class:`ImageBuffer` instance
@@ -275,45 +330,14 @@ class UnsupervisedVisualBagClassifier(Classifier):
         #Updating the labels
         y_user = image_buffer.getLabels()
         self._buildLUT(y_user)
-
-        #Extracting the features
-        self.setTask(1, "Extracting the features (model creation)")
-
-        X, y_user = self._coord.process(image_buffer, learningPhase=True)
-
-        self.endTask()
-
-        #Converting the labels
         y = self._convertLabel(y_user)
 
-        #Bag-of-word transformation
-        self.setTask(1, "Transforming data into bag-of-words")
-
-        X2 = self._visualBagger.fit_transform(X, y)
-
-        #Cleaning up
-        self._coord.clean(X, y_user)
-        del X
-        del y_user
-
-        height = len(image_buffer)
-        width = X2.shape[1]
-        nbFactor = X2.shape[0] // height
-
-        X3 = np.zeros((height, width), np.uint32)
-        startIndex = 0
-        endIndex = startIndex + nbFactor
-        for row in xrange(height):
-            X3[row] = X2[startIndex, endIndex].sum(axis=0)
-            startIndex = endIndex
-            endIndex = startIndex + nbFactor
-
-        self.endTask()
+        X = self._preprocess(image_buffer, learningPhase=True)
 
         #Delegating the classification
         self.setTask(1, "Learning the model")
 
-        self._classifier.fit(X3, y)
+        self._classifier.fit(X, y)
 
         self.endTask()
 
@@ -333,40 +357,9 @@ class UnsupervisedVisualBagClassifier(Classifier):
         list : list of int
             each entry is the classification label corresponding to the input
         """
-        self.setTask(1, "Extracting the features (prediction)")
 
-        X_pred, y = self._coord.process(image_buffer, learningPhase=False)
-
-        #Cleaning up
-        self._coord.clean(y)
-        del y
-
-        self.endTask()
-
-        #Bag-of-word transformation
-        self.setTask(1, "Transforming data into bag-of-words")
-
-        X2 = self._visualBagger.transform(X_pred)
-
-        #Cleaning up
-        self._coord.clean(X_pred)
-        del X_pred
-
-        height = len(image_buffer)
-        width = X2.shape[1]
-        nbFactor = X2.shape[0] // height
-
-        X3 = np.zeros((height, width), np.uint32)
-        startIndex = 0
-        endIndex = startIndex + nbFactor
-        for row in xrange(height):
-            X3[row] = X2[startIndex:endIndex].sum(axis=0)
-            startIndex = endIndex
-            endIndex = startIndex + nbFactor
-
-        self.endTask()
-
-        y_classif = self._classifier.predict(X3)
+        X = self._preprocess(image_buffer, learningPhase=False)
+        y_classif = self._classifier.predict(X)
         return self._convertLabelsBackToUser(y_classif)
 
     def predict_proba(self, image_buffer):
@@ -390,38 +383,5 @@ class UnsupervisedVisualBagClassifier(Classifier):
             #Early error
             self._classifier.predict_proba(np.zeros((1, 1)))
 
-        #Extracting the features
-        self.setTask(1, "Extracting the features (prediction)")
-
-        X_pred, y = self._coord.process(image_buffer, learningPhase=False)
-
-        #Cleaning up
-        self._coord.clean(y)
-        del y
-
-        self.endTask()
-
-        #Bag-of-word transformation
-        self.setTask(1, "Transforming data into bag-of-words")
-
-        X2 = self._visualBagger.transform(X_pred)
-
-        #Cleaning up
-        self._coord.clean(X_pred)
-        del X_pred
-
-        height = len(image_buffer)
-        width = X2.shape[1]
-        nbFactor = X2.shape[0] // height
-
-        X3 = np.zeros((height, width), np.uint32)
-        startIndex = 0
-        endIndex = startIndex + nbFactor
-        for row in xrange(height):
-            X3[row] = X2[startIndex:endIndex].sum(axis=0)
-            startIndex = endIndex
-            endIndex = startIndex + nbFactor
-
-        self.endTask()
-
-        return self._classifier.predict_proba(X3)
+        X = self._preprocess(image_buffer, learningPhase=False)
+        return self._classifier.predict_proba(X)
