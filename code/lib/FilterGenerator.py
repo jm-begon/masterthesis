@@ -12,6 +12,7 @@ convolution operator
 import numpy as np
 import itertools
 from sklearn.utils import check_random_state
+from NumberGenerator import IntegerUniformGenerator
 
 __all__ = ["FilterGenerator", "FixSizeFilterGenerator", "FiniteFilter",
            "Finite3Filter", "Finite3SameFilter", "IdPerturbatedFG",
@@ -257,9 +258,9 @@ class IdMaxL1DistPerturbFG(IdPerturbatedFG):
         maxDist = self._maxDist
         #Shuffling coordinates
         ls = [x for x in itertools.product(xrange(height), xrange(width))]
-        coord = self._shuffler.shuffle(ls)
+        self._shuffler.shuffle(ls)
         #Pertubating
-        for h, w in coord:
+        for h, w in ls:
             val = self._valGen.getNumber(-maxDist, maxDist)
             maxDist -= abs(val)
             linearFilter[h][w] += val

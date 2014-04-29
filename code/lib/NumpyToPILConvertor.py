@@ -36,7 +36,7 @@ class NumpyPILConvertor:
         """
         if isinstance(npImage, Image.Image):
             return npImage
-        return Image.fromarray(np.uint8(npImage))
+        return Image.fromarray(np.uint8(npImage.clip(0, 255)))
 
     def pILToNumpy(self, pilImg):
         """

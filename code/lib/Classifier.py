@@ -3,6 +3,7 @@
 # Date : Mar 10 2014
 """ """
 import numpy as np
+import scipy.sparse as sps
 
 from sklearn.metrics import confusion_matrix
 from sklearn.ensemble import RandomTreesEmbedding
@@ -293,18 +294,22 @@ class UnsupervisedVisualBagClassifier(Classifier):
         width = X2.shape[1]
         nbFactor = X2.shape[0] // height
 
-        X3 = np.zeros((height, width), np.uint16)
+        X3 = sps.csr_matrix((height, width), dtype=np.float64)
 
         self.logMsg("X3 shape : "+str(X3.shape), 35)
         self.logMsg("X3 dtype : "+str(X3.dtype), 35)
-        self.logSize("X3 total size : ", (X3.size*X3.itemsize), 35)
+        #self.logSize("X3 total size : ", (X3.size*X3.itemsize), 35)
 
-        startIndex = 0
-        endIndex = startIndex + nbFactor
-        for row in xrange(height):
-            X3[row] = X2[startIndex:endIndex].sum(axis=0)
-            startIndex = endIndex
-            endIndex = startIndex + nbFactor
+        rCoord, cCoord = X2.nonzero()
+        for r, c in zip(rCoord, cCoord):
+            X3[r//nbFactor, c] += 1
+
+#        startIndex = 0
+#        endIndex = startIndex + nbFactor
+#        for row in xrange(height):
+#            X3[row] = X2[startIndex:endIndex].sum(axis=0)
+#            startIndex = endIndex
+#            endIndex = startIndex + nbFactor
 
         #Cleaning up
         del X2  # Should be useless

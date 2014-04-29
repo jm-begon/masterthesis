@@ -276,6 +276,7 @@ def getFilterGenerator(policy, parameters, nbFilters, random=False):
                                                    perturbationSeed)
         baseFilterGenerator = StratifiedFG(minVal, maxVal, nbCells,
                                            perturbationGenerator,
+                                           sizeGenerator,
                                            normalisation=normalization,
                                            cellSeed=cellSeed)
 
