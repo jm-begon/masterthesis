@@ -300,16 +300,20 @@ class UnsupervisedVisualBagClassifier(Classifier):
         self.logMsg("X3 dtype : "+str(X3.dtype), 35)
         #self.logSize("X3 total size : ", (X3.size*X3.itemsize), 35)
 
-        rCoord, cCoord = X2.nonzero()
-        for r, c in zip(rCoord, cCoord):
-            X3[r//nbFactor, c] += 1
+#        rCoord, cCoord = X2.nonzero()
+#        for r, c in zip(rCoord, cCoord):
+#            X3[r//nbFactor, c] += 1
 
-#        startIndex = 0
-#        endIndex = startIndex + nbFactor
-#        for row in xrange(height):
-#            X3[row] = X2[startIndex:endIndex].sum(axis=0)
-#            startIndex = endIndex
-#            endIndex = startIndex + nbFactor
+        startIndex = 0
+        endIndex = startIndex + nbFactor
+        for row in xrange(height):
+            X3[row] = sps.csr_matrix(X2[startIndex:endIndex].sum(axis=0))
+            startIndex = endIndex
+            endIndex = startIndex + nbFactor
+            if row % 100 == 0:
+                X3.eliminate_zeros()
+
+        X3.eliminate_zeros()
 
         #Cleaning up
         del X2  # Should be useless
