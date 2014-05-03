@@ -9,6 +9,7 @@ from sklearn.metrics import confusion_matrix
 from sklearn.ensemble import RandomTreesEmbedding
 
 from Logger import Progressable
+from SlicerWrapper import SlicerWrapper
 
 
 __all__ = ["Classifier"]
@@ -259,6 +260,16 @@ class UnsupervisedVisualBagClassifier(Classifier):
                                                   verbose=verbose,
                                                   min_density=min_density)
 
+    def _buildHistogram(self, sparseWrapper):
+        height = len(sparseWrapper)
+        width = len(sparseWrapper[0])
+        hist = sps.lil_matrix((height, width), dtype=np.float64)
+
+        for row in xrange(height):
+            hist[row] = sparseWrapper[row].sum(axis=0)
+
+        return hist
+
     def _preprocess(self, image_buffer, learningPhase):
         if learningPhase:
             self.setTask(1, "Extracting the features (model creation)")
@@ -290,30 +301,16 @@ class UnsupervisedVisualBagClassifier(Classifier):
         del X_pred
         del y_user
 
-        height = len(image_buffer)
-        width = X2.shape[1]
-        nbFactor = X2.shape[0] // height
+        nbFactor = X2.shape[0] // len(image_buffer)
 
-        X3 = sps.csr_matrix((height, width), dtype=np.float64)
+        if nbFactor == 1:
+            return X2
 
-        self.logMsg("X3 shape : "+str(X3.shape), 35)
-        self.logMsg("X3 dtype : "+str(X3.dtype), 35)
-        #self.logSize("X3 total size : ", (X3.size*X3.itemsize), 35)
+        ls = self._coord._exec.execute("Building histogram",
+                                       self._buildHistogram,
+                                       SlicerWrapper(X2, nbFactor))
 
-#        rCoord, cCoord = X2.nonzero()
-#        for r, c in zip(rCoord, cCoord):
-#            X3[r//nbFactor, c] += 1
-
-        startIndex = 0
-        endIndex = startIndex + nbFactor
-        for row in xrange(height):
-            X3[row] = sps.csr_matrix(X2[startIndex:endIndex].sum(axis=0))
-            startIndex = endIndex
-            endIndex = startIndex + nbFactor
-            if row % 100 == 0:
-                X3.eliminate_zeros()
-
-        X3.eliminate_zeros()
+        X3 = sps.vstack(ls, "csr", np.float64)
 
         #Cleaning up
         del X2  # Should be useless
