@@ -41,6 +41,9 @@ class SlicerWrapper:
         else:
             return self.get(index)
 
+    def getContent(self):
+        return self._wrapped
+
 
 #==============SlicerWrapperIterator Iterator===============
 class SlicerWrapperIterator:

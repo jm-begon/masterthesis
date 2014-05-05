@@ -11,6 +11,8 @@ from sklearn.ensemble import RandomTreesEmbedding
 from Logger import Progressable
 from SlicerWrapper import SlicerWrapper
 
+from computeHistogram import computeHistogram
+
 
 __all__ = ["Classifier"]
 
@@ -272,6 +274,11 @@ class UnsupervisedVisualBagClassifier(Classifier):
 
         return hist
 
+    def _buildHistogramFast(self, sparseWrapper, nbObj, nbFactor):
+        matrix = sparseWrapper.getContent()
+        nbTrees = self._visualBagger.n_estimators
+        return computeHistogram(nbObj, nbFactor, nbTrees, matrix)
+
     def _preprocess(self, image_buffer, learningPhase):
         if learningPhase:
             self.setTask(1, "Extracting the features (model creation)")
@@ -308,9 +315,15 @@ class UnsupervisedVisualBagClassifier(Classifier):
         if nbFactor == 1:
             return X2
 
+#        ls = self._coord._exec.execute("Building histogram",
+#                                       self._buildHistogram,
+#                                       SlicerWrapper(X2, nbFactor))
+
         ls = self._coord._exec.execute("Building histogram",
-                                       self._buildHistogram,
-                                       SlicerWrapper(X2, nbFactor))
+                                       self._buildHistogramFast,
+                                       SlicerWrapper(X2, nbFactor),
+                                       nbObj=len(image_buffer),
+                                       nbFactor=nbFactor)
 
         X3 = sps.vstack(ls, "csr", np.float64)
 
