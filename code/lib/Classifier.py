@@ -262,11 +262,13 @@ class UnsupervisedVisualBagClassifier(Classifier):
 
     def _buildHistogram(self, sparseWrapper):
         height = len(sparseWrapper)
-        width = len(sparseWrapper[0])
+        width = sparseWrapper[0].shape[1]
         hist = sps.lil_matrix((height, width), dtype=np.float64)
 
+        self.setTask(height, "Bag of words - Building the histogram")
         for row in xrange(height):
             hist[row] = sparseWrapper[row].sum(axis=0)
+            self.updateTaskProgress(row)
 
         return hist
 

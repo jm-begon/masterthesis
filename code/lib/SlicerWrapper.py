@@ -16,7 +16,11 @@ class SlicerWrapper:
         self._nb = grpSize
 
     def __len__(self):
-        return len(self._wrapped)//self._nb
+        try:
+            l = len(self._wrapped)//self._nb
+        except TypeError:
+            l = self._wrapped.shape[0]//self._nb
+        return l
 
     def __iter__(self):
         return SlicerWrapperIterator(self)
