@@ -1,0 +1,226 @@
+% !TEX encoding = UTF-8
+\documentclass[a4paper]{report}
+
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage[T1]{fontenc}
+
+
+%math 
+\usepackage{amsmath} %Normal math
+\usepackage{amssymb} %Math symbols
+
+
+%Chimie
+%\usepackage[version=3]{mhchem}
+%cf http://fr.wikibooks.org/wiki/LaTeX/%C3%89crire_des_formules_chimiques
+
+% Allows for temporary adjustment of side margins
+% Lorsque les tableaux sont trop grands
+\usepackage{chngpage}
+
+% provides filler text
+\usepackage{lipsum}
+% usage : \lipsum[1]
+
+% just makes the table prettier (see \toprule, \bottomrule, etc. commands below)
+%\usepackage{booktabs}
+
+%Mise en page
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{fancyhdr}
+\usepackage[top=3cm, bottom=3cm, left=4cm, right=3cm]{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+
+%\usepackage{placeins}
+
+\definecolor{gris}{gray}{0.5}
+\definecolor{code}{gray}{0.95}
+
+% Table des matières cliquable 
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks, % empécher latex de colorer les liens
+    citecolor=black,
+    filecolor=black,
+    linkcolor=black, % couleur des liens dans la table des matières
+    urlcolor=blue
+}
+
+%Points dans la table des matières
+\usepackage{tocloft}
+\renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}} 
+% Ligne de points dans la table des matières
+
+\DeclareGraphicsExtensions{.png}
+
+
+%Page de garde
+
+\newlength{\larg}
+\setlength{\larg}{14.5cm}
+
+% Pour corriger alignement, jouer avec la taille de tabular (± 6cm)
+%%%PAGE DE TITRE%%%
+
+\newcommand{\titleg}{
+  \begin{titlepage}
+  \begin{center}
+
+  \bigskip
+  \bigskip
+  \bigskip
+  \bigskip
+  \bigskip
+
+
+  % Upper part of the page 
+  \includegraphics[width=3cm]{./logo}\\[1cm]
+  \smallskip
+  \textsc{\LARGE Université de Liège}\\
+  \smallskip
+  \textsc{Faculté des sciences appliquées}\\
+
+  \bigskip
+
+
+%1. thesis/dissertation director
+%2. thesis/dissertation advisor
+%3. thesis/dissertation committee chair
+
+%Master thesis
+  % Title 
+  \rule{\columnwidth}{1pt} \\[0.4cm] 
+  { \huge \bfseries Generic image classification : \\ \bigskip random and convolutional approaches}\\[0.4cm]
+  \rule{\columnwidth}{1pt} \\[0.2cm]
+
+
+
+  \begin{minipage}{0.7\textwidth} 
+  \begin{center} \large 
+  \textsc{Master thesis}
+  \end{center} \end{minipage}
+
+  \vfill
+  %TODO image
+
+
+  \begin{minipage}{0.7\textwidth} \begin{center}
+  \textit{Thesis directors} \\
+  \large Pierre \textsc{Geurts} \\
+  \large Raphaël \textsc{Marée} 
+  \end{center} \end{minipage} 
+
+  \bigskip
+  \bigskip
+  \bigskip
+
+  \textit{Author} \\
+  \begin{minipage}{0.7\textwidth} \begin{center}
+  \large Jean-Michel \textsc{Begon}
+  \end{center} \end{minipage} 
+  
+
+
+  \bigskip
+  \bigskip
+  \bigskip
+
+  \textsc{Année académique 2013-2014}
+  \end{center}
+  \end{titlepage}
+}
+
+%%%FIN PAGE DE TITRE%%%
+
+
+
+\begin{document}
+
+% Titre
+\titleg
+\thispagestyle{empty}
+\newpage
+
+% Mise en page
+\pagestyle{fancy}
+\lhead{}
+\chead{}
+\rhead{\itshape \textcolor{gris}{Image classification with extremely randomized trees}}
+\lfoot{\itshape \textcolor{gris}{a new feature extraction scheme}}
+\cfoot{}
+\rfoot{\itshape \textcolor{gris}{\thepage}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+\newpage 
+
+
+\tableofcontents
+
+\chapter{Introduction}
+\chapter{State of the art}
+\chapter{Objectives}
+\paragraph{}
+The hypothesis at the core of the present master thesis can be stated as follows : 
+\begin{quote}
+It is possible to combine the advantages of the classification forests, namely computational cost, feature importance evaluation and ease of use, with those of convolutional networks, primarily the accuracy.
+\end{quote}
+\paragraph{}
+%TODO : Come back to the computational cost and see how long it takes for the winners
+The feature importance evaluation capability is one of the nicest features of the classification forests. The importance of a given feature is computed as the total reduction of impurity brought by that feature, normalize so that the feature importances sum to one. The most notable use of this measure is feature selection. 
+\par
+The ease of use of the forests is particularly obvious in comparison of the neural networks. With the former, the number of hyper-parameters is quite small and well understood. Therefore, tuning the method is easy and can, usually, be undertaken manually with good results. On the other hand, neural networks tuning is much more complex, as even the structure has to be adapted for each problem. Evidence of this complexity is the amount of work dedicated to this subject in the literature. %Ref Geurts et opti
+\par
+%Convolutional network accuracy is state of the art, blabla \par
+Lastly, let us mention an interesting characteristic of convolutional networks we did not pursue but which has a important impact on scalability : online learning. Indeed, classification forests require to have the total amount of data right away which will be a limitation of our method.
+\paragraph{}
+Validating this hypothesis constitutes our main objective. To achieve this, we developed a method based on classification forests which incorporates some convolutional networks mechanics. More specifically, random linear filters are applied to the image database, followed by one or several spatial poolings. Then, several random subwindows are extracted from each transformed image. Each subwindow is described by the row pixel values.
+The in-depth description of this method is the main subject of chapter \ref{chap:methodo}.
+Proving the hypothesis is not our only goal, however. We also want to study closely the behavior of our classification method so as to understand its strength and limitations.
+\chapter{Methodology}
+\label{chap:methodo}
+\paragraph
+This chapter is divided into three sections. The first one aims at fully describing our classification method. The second section details the experimental condition in which our method will be evaluated. Finally, the last one highlight implementation details and technical issues.
+	\section{The RandConv framework}
+	\paragraph
+	This section is dedicated to an in-depth description of our classification method : RandConv. It stands for ``Random and 	convolutional''. The ``random'' part refer to both the filter generation and subwindow extraction. While the ``convolutional'' adjective refer to the application of the linear filters. 
+	\par
+	The RandConv 
+	\par
+	This method builds on previous works. The idea of applying predefined convolutional filters followed by several spatial poolings before extracting subwindows has already been done in \ref{}. It constituted a generalization of their generic image classification scheme. The contribution of the current paper is two fold. 
+	Firstly, the RandConv framework proposes several extensions of that method, the most noticeable of which being the ability to generate the filters. This approach resembles much more the convolution networks', where the filters are actually learned.
+	Secondly, whereas the aforementioned work was more like a proof of concept, the present study aim at analyzing more deeply this method.
+		\subsection{Filter Generation}
+			\subsubsection{Drawing mechanism}
+			\subsubsection{Normalization}
+			\subsubsection{non monotonicity}
+		\subsection{Pooling goals and strategies}
+			\subsubsection{Aggregations}
+			\subsubsection{Moving windows}
+		\subsection{Subwindows extraction}
+		\subsection{Feature descriptions}
+		%TODO : feature evaluation --> by filter
+		\subsection{Compression layer}
+		\subsection{Classification schemes}
+			\subsubsection{Direct classification}
+			\subsubsection{Feature learning scheme}
+	\section{Database and environment}
+	%CIFAR-10. Several important results. 288 Go de ram dont 145 en shm. 30 core. frequency ?			
+	\section{Implementation}
+		\subsection{Software architecture}
+		\subsection{Technical issues}
+\chapter{Result analysis}
+\paragraph
+In this chapter, we describe the experiments conducted with our new classification method and analyze their results. The chapter is divided into two sections. The first one tackles the direct classification scheme, where the forest of extremely randomized trees serves as classificator. The second section describes the other variant where the extremely randomized trees are used to create a visual dictionary, while the actual classification is undergone by a support vector machine.
+	\section{Direct classification scheme}
+	\section{Feature learning scheme}
+\chapter{Conclusion and perspective}
+ 
+  
+\end{document}	
+
+
