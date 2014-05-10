@@ -9,7 +9,6 @@ from sklearn.metrics import confusion_matrix
 from sklearn.ensemble import RandomTreesEmbedding
 
 from Logger import Progressable
-from SlicerWrapper import SlicerWrapper
 
 from computeHistogram import computeHistogram
 
@@ -127,6 +126,28 @@ class Classifier(Progressable):
 
         return self
 
+    def predict_predict_proba(self, image_buffer):
+        """
+        Classify the data contained in the :class:`ImageBuffer` instance
+
+        Parameters
+        -----------
+        image_buffer : :class:`ImageBuffer`
+            The data to classify
+
+        Return
+        -------
+        pair : (y_proba, y_classif)
+        y_proba: list of list of float
+            each entry is the probability vector of the input of the same
+            index as computed by the base classifier
+        y_classif : a list of int
+            each entry is the classification label corresponding to the input
+        """
+        y_prob = self.predict_proba(image_buffer)
+        y_classif = np.argmax(y_prob, axis=1)
+        return y_prob, self._convertLabelsBackToUser(y_classif)
+
     def predict(self, image_buffer):
         """
         Classify the data contained in the :class:`ImageBuffer` instance
@@ -141,8 +162,8 @@ class Classifier(Progressable):
         list : list of int
             each entry is the classification label corresponding to the input
         """
-        y_classif = np.argmax(self.predict_proba(image_buffer), axis=1)
-        return self._convertLabelsBackToUser(y_classif)
+        _, y_classif = self.predict_predict_proba(image_buffer)
+        return y_classif
 
     def predict_proba(self, image_buffer):
         """
@@ -253,6 +274,7 @@ class UnsupervisedVisualBagClassifier(Classifier):
                  max_depth=5, min_samples_split=2, min_samples_leaf=1,
                  n_jobs=-1, random_state=None, verbose=0, min_density=None):
         Classifier.__init__(self, coordinator, base_classifier)
+        self.histoSize = 0
         self._visualBagger = RandomTreesEmbedding(n_estimators=n_estimators,
                                                   max_depth=max_depth,
                                                   min_samples_split=min_samples_split,
@@ -262,22 +284,6 @@ class UnsupervisedVisualBagClassifier(Classifier):
                                                   verbose=verbose,
                                                   min_density=min_density)
 
-    def _buildHistogram(self, sparseWrapper):
-        height = len(sparseWrapper)
-        width = sparseWrapper[0].shape[1]
-        hist = sps.lil_matrix((height, width), dtype=np.float64)
-
-        self.setTask(height, "Bag of words - Building the histogram")
-        for row in xrange(height):
-            hist[row] = sparseWrapper[row].sum(axis=0)
-            self.updateTaskProgress(row)
-
-        return hist
-
-    def _buildHistogramFast(self, sparseWrapper, nbObj, nbFactor):
-        matrix = sparseWrapper.getContent()
-        nbTrees = self._visualBagger.n_estimators
-        return computeHistogram(nbObj, nbFactor, nbTrees, matrix)
 
     def _preprocess(self, image_buffer, learningPhase):
         if learningPhase:
@@ -297,11 +303,12 @@ class UnsupervisedVisualBagClassifier(Classifier):
         self.endTask()
 
         #Bag-of-word transformation
-        self.setTask(1, "Transforming data into bag-of-words")
+        self.setTask(1, "Transforming data into bag-of-words (Tree part)")
 
         X2 = None
         if learningPhase:
             X2 = self._visualBagger.fit_transform(X_pred, y_user)
+            self.histoSize = X2.shape[1]
         else:
             X2 = self._visualBagger.transform(X_pred)
 
@@ -310,29 +317,35 @@ class UnsupervisedVisualBagClassifier(Classifier):
         del X_pred
         del y_user
 
+        self.endTask()
+
         nbFactor = X2.shape[0] // len(image_buffer)
+
+        if not sps.isspmatrix_csr(X2):
+            X2 = X2.tocsr()
 
         if nbFactor == 1:
             return X2
 
-#        ls = self._coord._exec.execute("Building histogram",
-#                                       self._buildHistogram,
-#                                       SlicerWrapper(X2, nbFactor))
-
-        ls = self._coord._exec.execute("Building histogram",
-                                       self._buildHistogramFast,
-                                       SlicerWrapper(X2, nbFactor),
-                                       nbObj=len(image_buffer),
-                                       nbFactor=nbFactor)
-
-        X3 = sps.vstack(ls, "csr", np.float64)
+        self.setTask(len(image_buffer), "Transforming data into bag-of-words (Histogram part)")
+        nbTrees = self._visualBagger.n_estimators
+        X3 = computeHistogram(len(image_buffer), nbFactor, nbTrees, X2)
+        self.endTask()
 
         #Cleaning up
         del X2  # Should be useless
 
+        return X3
+
+    def fit_histogram(self, hist, y):
+        #Delegating the classification
+        self.setTask(1, "Learning the model")
+
+        self._classifier.fit(hist, y)
+
         self.endTask()
 
-        return X3
+        return self
 
     def fit(self, image_buffer):
         """
@@ -355,14 +368,7 @@ class UnsupervisedVisualBagClassifier(Classifier):
 
         X = self._preprocess(image_buffer, learningPhase=True)
 
-        #Delegating the classification
-        self.setTask(1, "Learning the model")
-
-        self._classifier.fit(X, y)
-
-        self.endTask()
-
-        return self
+        return self.fit_histogram(X, y)
 
     def predict(self, image_buffer):
         """

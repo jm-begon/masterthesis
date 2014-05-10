@@ -220,7 +220,7 @@ class SerialExecutor(TaskExecutor):
             if len(kwargs) == 0:
                 ls = [function(data)]
             else:
-                ls = [function(data, *kwargs)]
+                ls = [function(data, **kwargs)]
         elif len(kwargs) == 0:
             ls = [function(data, *args)]
         else:

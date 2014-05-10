@@ -15,28 +15,36 @@ from SubWindowExtractor import SubWindowExtractor
 from FilterGenerator import FilterGenerator
 from CifarLoader import CifarFromNumpies
 from ImageBuffer import FileImageBuffer, NumpyImageLoader
+from Logger import formatDuration
 
-
+#======PROB MATRIX=========#
+saveFile = "rc_"
+shouldSave = True
 #======HYPER PARAMETERS======#
 #----RandConv param
 #Filtering
 nb_filters = 100
-filterPolicy = (Const.FGEN_ZEROPERT, {"minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_RU, "normalization":FilterGenerator.NORMALISATION_MEANVAR})
-#filterPolicy = (Const.FGEN_ZEROPERT, {"minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_SET, "probLaw":[(-1, 0.3), (0, 0.4), (1, 0.3)], "normalization":FilterGenerator.NORMALISATION_MEANVAR})
+#filterPolicy = (Const.FGEN_ZEROPERT, {"minSize":2, "maxSize":10, "minVal":-1, "maxVal":1, "valGen":Const.RND_RU, "normalization":FilterGenerator.NORMALISATION_NONE})
+filterPolicy = (Const.FGEN_ZEROPERT, {"minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_SET, "probLaw":[(-1, 0.3), (0, 0.4), (1, 0.3)], "normalization":FilterGenerator.NORMALISATION_NONE})
 #filterPolicy = (Const.FGEN_IDPERT, {"minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_RU})
 #filterPolicy = (Const.FGEN_IDPERT, {"minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_GAUSS, "outRange":0.05})
 #filterPolicy = (Const.FGEN_IDDIST, {"minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_RU, "maxDist":5})
-#filterPolicy = (Const.FGEN_STRAT, {"minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_GAUSS,  "outRange":0.001, "strat_nbCells":10, "minPerturbation":minPerturbation, "maxPerturbation":maxPerturbation})
+#filterPolicy = (Const.FGEN_STRAT, {"minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_GAUSS,  "outRange":0.001, "strat_nbCells":10, "minPerturbation":0, "maxPerturbation":1})
 #
-#filterPolicy = (Const.FGEN_ZEROPERT, {"sparseProb":0.25, "minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_RU, "normalization":FilterGenerator.NORMALISATION_MEANVAR})
-#filterPolicy = (Const.FGEN_ZEROPERT, {"sparseProb":0.25, "minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_SET, "probLaw":[(-1, 0.3), (0, 0.4), (1, 0.3)], "normalization":FilterGenerator.NORMALISATION_MEANVAR})
+#filterPolicy = (Const.FGEN_ZEROPERT, {"sparseProb":0.25, "minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_RU, "normalization":FilterGenerator.NORMALISATION_NONE})
+#filterPolicy = (Const.FGEN_ZEROPERT, {"sparseProb":0.25, "minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_SET, "probLaw":[(-1, 0.3), (0, 0.4), (1, 0.3)], "normalization":FilterGenerator.NORMALISATION_NONE})
 #filterPolicy = (Const.FGEN_IDPERT, {"sparseProb":0.25, "minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_RU})
 #filterPolicy = (Const.FGEN_IDPERT, {"sparseProb":0.25, "minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_GAUSS, "outRange":0.05})
 #filterPolicy = (Const.FGEN_IDDIST, {"sparseProb":0.25, "minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_RU, "maxDist":5})
-#filterPolicy = (Const.FGEN_STRAT, {"sparseProb":0.25, "minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_GAUSS,  "outRange":0.001, "strat_nbCells":10, "minPerturbation":minPerturbation, "maxPerturbation":maxPerturbation})
+#filterPolicy = (Const.FGEN_STRAT, {"sparseProb":0.25, "minSize":2, "maxSize":32, "minVal":-1, "maxVal":1, "valGen":Const.RND_GAUSS,  "outRange":0.001, "strat_nbCells":10, "minPerturbation":0, "maxPerturbation":1})
 
 #Aggregation
-poolings = [(2, 2, Const.POOLING_AGGREG_AVG)]
+poolings = [
+        (2, 2, Const.POOLING_AGGREG_AVG),
+#        (3, 3, Const.POOLING_MW_AVG),
+#        (3, 3, Const.POOLING_MW_MIN),
+#        (3, 3, Const.POOLING_MW_MAX)
+        ]
 
 #Subwindow
 nbSubwindows = 10
@@ -45,14 +53,15 @@ subwindowMaxSizeRatio = 1.
 subwindowTargetWidth = 16
 subwindowTargetHeight = 16
 fixedSize = False
-subwindowInterpolation = SubWindowExtractor.INTERPOLATION_BILINEAR
+subwindowInterpolation = SubWindowExtractor.INTERPOLATION_NEAREST
 
 #Misc.
 includeOriginalImage = True
 random = False
-nbJobs = 1
-verbosity = 8
-tempFolder = "/dev/shm"
+nbJobs = -1
+verbosity = 40
+#tempFolder = "/dev/shm"
+tempFolder = "/home/jmbegon/jmbegon/code/work/tmp"
 
 #-----Extratree param
 nbTrees = 30
@@ -61,6 +70,7 @@ maxDepth = None
 minSamplesSplit = 2
 minSamplesLeaf = 1
 bootstrap = False
+randomClassif = True
 nbJobsEstimator = -1
 verbose = 8
 
@@ -68,11 +78,11 @@ verbose = 8
 maxLearningSize = 50000
 maxTestingSize = 10000
 
-learningUse = 50
+learningUse = 50000
 learningSetDir = "learn/"
 learningIndexFile = "0index"
 
-testingUse = 10
+testingUse = 10000
 testingSetDir = "test/"
 testingIndexFile = "0index"
 
@@ -98,13 +108,16 @@ def run(nb_filters=nb_filters,
         minSamplesSplit=minSamplesSplit,
         minSamplesLeaf=minSamplesLeaf,
         bootstrap=bootstrap,
+        randomClassif=randomClassif,
         nbJobsEstimator=nbJobsEstimator,
         verbose=verbose,
         learningUse=learningUse,
-        testingUse=testingUse):
+        testingUse=testingUse,
+        saveFile=saveFile,
+        shouldSave=shouldSave):
 
     randomState = None
-    if random:
+    if not randomClassif:
         randomState = 100
 
     lsSize = learningUse
@@ -116,7 +129,7 @@ def run(nb_filters=nb_filters,
         tsSize = maxTestingSize
 
     #======INSTANTIATING========#
-    #--Randconv--
+    #--RandConv--
     randConvCoord = coordinatorRandConvFactory(
         nbFilters=nb_filters,
         filterPolicy=filterPolicy,
@@ -144,7 +157,7 @@ def run(nb_filters=nb_filters,
                                        random_state=randomState,
                                        verbose=verbose)
 
-    #--Classifier
+     #--Classifier
     classifier = Classifier(randConvCoord, baseClassif)
 
     #--Data--
@@ -162,13 +175,13 @@ def run(nb_filters=nb_filters,
     fitStart = time()
     classifier.fit(learningSet)
     fitEnd = time()
-    print "Learning done", (fitEnd-fitStart), "seconds"
+    print "Learning done", formatDuration(fitEnd-fitStart)
     sys.stdout.flush()
 
     #--Testing--#
     y_truth = testingSet.getLabels()
     predStart = time()
-    y_pred = classifier.predict(testingSet)
+    y_prob, y_pred = classifier.predict_predict_proba(testingSet)
     predEnd = time()
     accuracy = classifier.accuracy(y_pred, y_truth)
     confMat = classifier.confusionMatrix(y_pred, y_truth)
@@ -176,7 +189,7 @@ def run(nb_filters=nb_filters,
     #====ANALYSIS=====#
     importance, order = randConvCoord.importancePerFeatureGrp(baseClassif)
 
-    print "==================RandConv======================="
+    print "==================RandConv================"
     print "-----------Filtering--------------"
     print "nb_filters", nb_filters
     print "filterPolicy", filterPolicy
@@ -209,9 +222,14 @@ def run(nb_filters=nb_filters,
     print "LearningSet size", len(learningSet)
     print "TestingSet size", len(testingSet)
     print "-------------------------------"
-    print "Fit time", (fitEnd-fitStart), "seconds"
-    print "Classifcation time", (predEnd-predStart), "seconds"
+    if shouldSave:
+        print "saveFile", saveFile
+    print "Fit time", formatDuration(fitEnd-fitStart)
+    print "Classifcation time", formatDuration(predEnd-predStart)
     print "Accuracy", accuracy
+
+    if shouldSave:
+        np.save(saveFile, y_prob)
 
     return accuracy, confMat, importance, order
 
