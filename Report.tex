@@ -162,7 +162,9 @@
 \tableofcontents
 
 \chapter{Introduction}
+
 \chapter{State of the art}
+
 \chapter{Objectives}
 \paragraph{}
 The hypothesis at the core of the present master thesis can be stated as follows : 
@@ -179,24 +181,85 @@ The ease of use of the forests is particularly obvious in comparison of the neur
 Lastly, let us mention an interesting characteristic of convolutional networks we did not pursue but which has a important impact on scalability : online learning. Indeed, classification forests require to have the total amount of data right away which will be a limitation of our method.
 \paragraph{}
 Validating this hypothesis constitutes our main objective. To achieve this, we developed a method based on classification forests which incorporates some convolutional networks mechanics. More specifically, random linear filters are applied to the image database, followed by one or several spatial poolings. Then, several random subwindows are extracted from each transformed image. Each subwindow is described by the row pixel values.
-The in-depth description of this method is the main subject of chapter \ref{chap:methodo}.
-Proving the hypothesis is not our only goal, however. We also want to study closely the behavior of our classification method so as to understand its strength and limitations.
+The in-depth description of this ``RandConv'' method is the main subject of chapter \ref{chap:methodo}.
+	This method builds on previous works. The idea of applying predefined convolutional filters followed by several spatial poolings before extracting subwindows has already been done in \ref{}. It constituted a generalization of their generic image classification scheme. The contribution of the current paper is two fold. 
+	Firstly, the RandConv framework proposes several extensions of that method, the most noticeable of which being the ability to generate the filters. This approach resembles much more the convolution networks', where the filters are actually learned.
+	Secondly, whereas the aforementioned work was more like a proof of concept, the present study aim at analyzing more deeply this method. Indeed, proving the hypothesis is not our only goal. We also want to study closely the behavior of our classification method so as to understand its strength and limitations.
+
 \chapter{Methodology}
 \label{chap:methodo}
 \paragraph
-This chapter is divided into three sections. The first one aims at fully describing our classification method. The second section details the experimental condition in which our method will be evaluated. Finally, the last one highlight implementation details and technical issues.
+This chapter is divided into three sections. The first one aims at fully describing our classification method. The second section details the experimental condition in which our method will be evaluated. Finally, the last one highlights implementation details and technical issues.
 	\section{The RandConv framework}
-	\paragraph
-	This section is dedicated to an in-depth description of our classification method : RandConv. It stands for ``Random and 	convolutional''. The ``random'' part refer to both the filter generation and subwindow extraction. While the ``convolutional'' adjective refer to the application of the linear filters. 
-	\par
-	The RandConv 
-	\par
-	This method builds on previous works. The idea of applying predefined convolutional filters followed by several spatial poolings before extracting subwindows has already been done in \ref{}. It constituted a generalization of their generic image classification scheme. The contribution of the current paper is two fold. 
-	Firstly, the RandConv framework proposes several extensions of that method, the most noticeable of which being the ability to generate the filters. This approach resembles much more the convolution networks', where the filters are actually learned.
-	Secondly, whereas the aforementioned work was more like a proof of concept, the present study aim at analyzing more deeply this method.
-		\subsection{Filter Generation}
+	\paragraph{}
+	This section is dedicated to an in-depth description of our classification method : RandConv. It stands for ``Random and 	convolutional''. The ``random'' part refer to both the filter generation and subwindow extraction. While the ``convolutional'' adjective refers to the application of the linear filters. 
+	\paragraph{}
+	So as to bridge between classification forests and convolutional networks, we started from the former and added characteristics of the latter. Those characteristics are the convolutional filtering followed by spatial pooling.
+	The RandConv method is divided into the following parts :
+	
+	\begin{enumerate}
+		\item Generating the $N$ linear filters
+		\item Applying the $N$ filters to the $M$ images of the databases
+		\item Applying the $P$ spatial poolings to the $N \times M$ filtered images
+		\item Extracting $S$ subwindows from each of the $N \times M \times P$ pooled and filtered images
+		\item Describing each of the $N \times M \times P \times S$ pieces by a set of learning features
+	\end{enumerate}
+	
+	Thus, from a database of $M$ images, we end up with a feature matrix with $M \times S$ objects described by a number of variables
+	function of $N \times P$.
+	
+	\paragraph{}
+	Although, the method has been designed with the use of classification forest in mind, the RandConv method, \textit{per se}, is actually a feature extraction method. Its goal is to transform a set of images into a set of corresponding feature vectors. The actual classification could be carried out by any traditional learning algorithm. Nevertheless, regarding our primary objective and some other attractive properties of the trees, which will be developed in subsection \ref{subsec:methodo-filtergen}, we will stick with classification forests in one way or another.
+
+
+	
+		\subsection{Filter Generation}\label{subsec:methodo-filtergen}
+		%dimension, square size, odd natural, uniform at first
+		%coefficients
+		\paragraph{}
+		Mimicking the convolutional filtering is carried out by generating random linear, spatially invariant filters. More precisely, we generate the 2D finite impulse response matrices. First, the filter dimensions and then the filter coefficients are randomly drawn. This means that, contrary to the ConvNet, the coefficients are not directly learned. The coefficient learning is simulated by generating a vast number of filters and letting the learning algorithm choose the ones to emphasis. 
+		\paragraph{}
+		This calls for an important remark : decision tree-based solutions are ideal classifier candidates. Firstly, their construction technique allow them to emphasis easily the interesting filters. Secondly, they deal well enough with numerous, possibly irrelevant, features. Indeed, the major impact is a reduction of the model effective complexity. The resulting accuracy drop is much less tremendous than with some other classifiers. Besides, this reduction of complexity can be balanced by the number of subwindows extracted from each image. Augmenting the dataset produces deeper trees ; more complex model. Lastly, they scale well enough due to their relatively low computational cost, especially the extremely randomized tree variant.
+		
+			
+			
 			\subsubsection{Drawing mechanism}
+			\paragraph{}
+			How to draw the filters is one of the RandConv framework cornerstone. The drawing mechanism should meet two prerequisites. Firstly, it should be able to produce unlimited, or at the least great, number of different filters. Secondly, the filters should be of some value by themselves but also together. Intuitively, a valuable filter should highlight ``information'' not directly accessible from the original image by the learning algorithm. As for having value together, two different filters should not uncover the exact same ``information''. For instance, producing twice the same filter is useless.
+			
+			\paragraph{}
+			Several drawing mechanisms have been developed with different characteristics in mind :
+			
+			\begin{itemize}
+				\item Custom filters
+				\item Discrete law generator
+				\item Zero-perturbation generator
+				\item Identity-perturbation generator
+				\item Maximum-distance-from-identity generator
+				\item Stratified perturbed generator
+			\end{itemize}
+			
+			The first one is a special case. It consists of a set of 38 well known filter, among which the Sobel and Prewitt filters, several Laplacian filters of different sizes, the compass gradient filters, some low and high pass filters and other line detection filters.
+			%\begin{multicols}{3}
+			%\end{multicols}
+			Being a small set, it violates the first prerequisite. However, this pseudo filter generator will be useful as a comparison basis : the filter are the same ones as in \ref{}. Besides, these filters have practical application cases which random filters might not share. It is thus a reference point to see whether the generated filters highlight interesting ``information''.
+			\paragraph{}
+			The other mechanism draw randomly the filters. Before generating the coefficients of a filter, its dimensions must first be determined. The widths and heights of the impulse response matrices are drawn from an bounded set of odd, positive integers. Although we limited our tests to square matrices, this is not a strict requirement.
+			We mainly worked with a uniform distribution of sizes, playing somewhat with the set bounds. Once again, this is not a limitation as other distribution can easily be used. For example, it is possible to create a distribution biasing towards small sizes. 
+			As for the bounds, a minimum seems to be 3. The maximum size should not be greater than twice the image size but needs probably not be greater than half this size. Indeed, greater filters might incorporate mostly non-local information.
+			Conceptually, for a given maximum size, say $n = h \times w$, it is easy to build a bijection between the filter matrices space and $\mathbb{R}^n$. This representation will help us visualize the drawing mechanisms.
+			\paragraph{Discrete law generator.}
+			Once the size is fixed, every coefficient is drawn for a predefined discrete law. Even though the number of such filters is bounded for a given maximum size, this filter space is still vast enough so as to meet the first generator prerequisite. We tested the following law : -1 with a probability of .3, 0 with a probability of .4 and 1 with a probability of .3.
+			\paragraph{Zero-perturbation generator.}
+			Once the size is fixed, every coefficient are drawn from the same continuous probability law. Although there is no restriction on the probability law, we expect it to be symmetrical and zero-centered, hence the generator name. We used to such laws. The first one is the uniform law bounded with -1 and 1. In this respect, the generator space is mappable to an hypercube centered on the origin. The second law was a Gaussian so that the probability of being outside the range [-1, 1] is equal to a given threshold. The isoprobabilities thus form hyperspheres. The points lying outside of the range can be forced to the boundary so that the generator space becomes the same hypercube as with the uniform law. 
+			Zero-centered generator were motivated by the examination of common filters which portray the same characteristic.
+			\paragraph{Identity-perturbation generator}
+			
+			
+			This generator is parametrized by a minimum and a maximum value defining the hypercube boundaries of the generator space. The center of the hypercube is the mean value of the 
+			
 			\subsubsection{Normalization}
+			\subsubsection{Filter application}%Border policy, working with colors
 			\subsubsection{non monotonicity}
 		\subsection{Pooling goals and strategies}
 			\subsubsection{Aggregations}
