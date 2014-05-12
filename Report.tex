@@ -9,6 +9,7 @@
 %math 
 \usepackage{amsmath} %Normal math
 \usepackage{amssymb} %Math symbols
+\usepackage{centernot}
 
 
 %Chimie
@@ -213,7 +214,7 @@ This chapter is divided into three sections. The first one aims at fully describ
 
 
 	
-		\subsection{Filter Generation}\label{subsec:methodo-filtergen}
+		\subsection{Filter Generation and application}\label{subsec:methodo-filtergen}
 		%dimension, square size, odd natural, uniform at first
 		%coefficients
 		\paragraph{}
@@ -225,7 +226,7 @@ This chapter is divided into three sections. The first one aims at fully describ
 			
 			\subsubsection{Drawing mechanism}
 			\paragraph{}
-			How to draw the filters is one of the RandConv framework cornerstone. The drawing mechanism should meet two prerequisites. Firstly, it should be able to produce unlimited, or at the least great, number of different filters. Secondly, the filters should be of some value by themselves but also together. Intuitively, a valuable filter should highlight ``information'' not directly accessible from the original image by the learning algorithm. As for having value together, two different filters should not uncover the exact same ``information''. For instance, producing twice the same filter is useless.
+			How to draw the filters is one of the RandConv framework cornerstone. The drawing mechanism should meet two prerequisites. Firstly, it should be able to produce unlimited, or at the least great, number of different filters. Secondly, the filters should be of some value by themselves but also together. Intuitively, a valuable filter should highlight ``information'' not directly accessible from the original image by the learning algorithm. We will call this characteristic the individual usefulness or simply usefulness. As for having value together, two different filters should not uncover the exact same ``information''. For instance, producing twice the same filter is useless. We will call this the group usefulness or co-usefulness.
 			
 			\paragraph{}
 			Several drawing mechanisms have been developed with different characteristics in mind :
@@ -250,29 +251,139 @@ This chapter is divided into three sections. The first one aims at fully describ
 			Conceptually, for a given maximum size, say $n = h \times w$, it is easy to build a bijection between the filter matrices space and $\mathbb{R}^n$. This representation will help us visualize the drawing mechanisms.
 			\paragraph{Discrete law generator.}
 			Once the size is fixed, every coefficient is drawn for a predefined discrete law. Even though the number of such filters is bounded for a given maximum size, this filter space is still vast enough so as to meet the first generator prerequisite. We tested the following law : -1 with a probability of .3, 0 with a probability of .4 and 1 with a probability of .3.
+			This generator was motivated by the spatial interpretation of the convolution. It accounts for summing and substracting neighboring pixel together.
 			\paragraph{Zero-perturbation generator.}
-			Once the size is fixed, every coefficient are drawn from the same continuous probability law. Although there is no restriction on the probability law, we expect it to be symmetrical and zero-centered, hence the generator name. We used to such laws. The first one is the uniform law bounded with -1 and 1. In this respect, the generator space is mappable to an hypercube centered on the origin. The second law was a Gaussian so that the probability of being outside the range [-1, 1] is equal to a given threshold. The isoprobabilities thus form hyperspheres. The points lying outside of the range can be forced to the boundary so that the generator space becomes the same hypercube as with the uniform law. 
+			Once the size is fixed, every coefficients are drawn from the same continuous probability law. Although there is no restriction on the probability law, we expect it to be symmetrical and zero-centered, hence the generator name. We used two such laws. The first one is the uniform law over reals bounded with -1 and 1. In this respect, the generator space is mappable to an hypercube centered on the origin. The second law was a Gaussian so that the probability of being outside the range [-1, 1] is equal to a given threshold. The isoprobabilities thus form hyperspheres. The points lying outside of the range can be forced to the boundary so that the generator space becomes the same hypercube as with the uniform law. 
 			Zero-centered generator were motivated by the examination of common filters which portray the same characteristic.
-			\paragraph{Identity-perturbation generator}
+			\paragraph{Identity-perturbation generator.}
+			Identity-perturbation generator work in the same fashion as its zero-perturbation counterpart. The only difference is that the hyper-structures are centered around the identity filter instead of the origin. 
+			The motivation behind this generator was to produce filtered images resembling the original while being different enough so as to be of value.
+			\paragraph{Maximum-distance-from-identity generator.} 
+			This kind of generators fulfills the same purpose as the previous one. The generator space is also centered on the identity filter but its shape is different since we decided to work with the Manhattan distance. Concretely, the generator is parametrized by a maximum distance, independent of the filter sizes. The coefficients are processed in a random order. A random perturbation from the range [-maximum distance, maximum distance], expectedly from a uniform distribution, is applied to the first coefficient. Before processing the next coefficient, the maximum distance is updated by substracting the absolute value of the perturbation.
+			\paragraph{Stratified perturbed generator}
+			This last class of generators are parametrized by a minimum value $m$, a maximum value $M$ and a subdivision number $n$. For each coefficient, a value $v$ from the set $\{m + \frac{k+1}{2} \times \frac{(M-m)}{n} | k \in \mathbb{Z}, k < n\}$ is chosen randomly.  This value is then randomly perturbed before being assigned to the coefficient. The perturbation is not mandatory and should stay in the range [$-\frac{(M-m)}{2n}, \frac{(M-m)}{2n}$]. Expected perturbation law are Gaussian and uniform.
+			This generator class was motivated by the idea to produce as dissimilar filters as possible so as to meet our second requirement about co-usefulness. Disregarding the perturbation, the filter space is finite but still huge. For instance, the space for a subdivision number of 10 with only the smallest filters (3x3) would still mean $10^9$ filters.  Whereas, $2^9$ filters, \textit{i.e.} a subdivision number of 2, is manageable, the other generators are able to produce filters as dissimilar. Furthermore, the following non-monotonicity property suggests that a dissimilar approach in the filter space might not be the best way to produce sets of co-useful filters. Indeed, we can use the distance to measure co-usefulness : if two filtered image are close, they probably highlight the same ``information''.
+			
+			\paragraph{Non-monotonicity property.}
+			We will show that closeness in the filter space does not necessarily imply closeness of the filtering results. Closeness is to be understood as distance from a reference.
+			Let $I$ be an image and $F$, $F_1$, $F_2$ be three linear, spatially invariant filters of possibly different sizes. Let also
+			\begin{align*}
+				J &= I * F \\
+				J_1 &= I * F_1 \\
+				J_2 &= I * F_2 \\
+			\end{align*}
+			We will show by counterexample that $\parallel F - F_1 \parallel \geq \parallel F - F_2 \parallel \centernot\implies \parallel J - J_1 \parallel \geq \parallel J - J_2 \parallel$.
+			First let us name $e_1 = F - F_1$ and $e_2 = F - F_2$. By linearity of the convolutional operation, we have :
+			\[
+				J_1 = I * F_1 =  I * (F - e_1) = (I * F) - (I * e_1) = J - (I * e_1)
+				\iff
+				J - J_1 = I * e_1
+			\]
+			In these terms, we have to show that $\parallel e_1 \parallel \geq \parallel e_2 \parallel \centernot\implies \parallel I * e_1 \parallel \geq \parallel I * e_2 \parallel$. 
+			Let us take $e_1$ such that the coefficients sum up to zero but with a great dispersion and $e_2$ such that the sum of the coefficient is strictly greater than zero but with a smaller dispersion than $e_1$. Thus, we have  $\parallel e_1 \parallel \geq \parallel e_2 \parallel$. Moreover, let us consider the case of a image $I$ with constant value $c > 0$. In this setting, $\parallel I * e_1 \parallel = 0$ while $\parallel I * e_2 \parallel = c \times k > \parallel I * e_1 \parallel$.
+			\par
+			Therefore, playing with closeness or dissimilarities in the filter space yield no warranty about the same metrics with the filtered images. However, using the distance as measure of co-usefulness is arguably a poor choice, since close images might still highlight different aspects of the images. Considering this remark, the main shortcoming of the stratified generator is probably that, with respect to the number of generated filters we will use, it  does not produce any significant advantage over other generators.
 			
 			
-			This generator is parametrized by a minimum and a maximum value defining the hypercube boundaries of the generator space. The center of the hypercube is the mean value of the 
+			
+			
+			
+			
 			
 			\subsubsection{Normalization}
-			\subsubsection{Filter application}%Border policy, working with colors
-			\subsubsection{non monotonicity}
+			%Justification, impact on the filter space, spatial interpretation & impact, spectral interpretation & impact
+			All the generators we discussed in the previous section are able to perform a post-processing normalization of the filter. There are four normalizations :
+			
+			\begin{itemize}
+				\item No normalization : the post-processing normalization is skipped.
+				\item Zero mean : the mean value of the filter coefficients is null.
+				\item Unit variance : the coefficients have a unit variance.
+				\item Zero mean and unit variance : both the previous. First the zero mean then the unit variance.
+				\item Unit sum : the coefficients sum to one.
+			\end{itemize}
+			
+			The introduction of the zero mean and unit variance normalizations was primarily motivated by supplying support for learning algorithms other than classification forests. Indeed, their effect is to impose a common dynamics to all the filters. While trees can cope easily with variables of different dynamics, some classification schemes are not applicable is that setting or suffer greatly from it.
+			As for the unit sum normalization, applied in conjunction with a generator producing positive coefficients, it produces ``convex combination filters'' in the following sense : for each step of the convolution, the output pixel value is a convex combination of the minimum and maximum of the neighboring original pixels (where the neighborhood is defined by the filter size).
+			We will now look at the implication of the normalizations on the generator space and the filtering in both the spacial and frequency spaces. We will reuse the filter representation in $\mathbb{R}^n$ and will denote by $\textbf{1}$ the vector whose coefficients are all $1$.
+			
+			\paragraph{Zero mean normalization.}
+			In $\mathbb{R}^n$, the zero mean filters form the hyperplane $\{x \in \mathbb{R}^n | \textbf{1}^{T}x = 0\}$. The normalization is a projection onto that hyperplane. The resulting filter $y$ is computed as $y = x - frac{1}{n}\textbf{1}^{T}x\textbf{1}$. This operation can produce a filter which is outside of the original filter space.
+			Since this operation is linear, the impact of the filtering are straightforwardly identifiable. Denoting $I$ a given image, $x_f$ a given filter, whose mean $m$ form the constant filter $m_f$, $y_f$ the normalization $ y_f = x_f - m_f$ and $\textbf{1}_f$ the constant filter with only ones as coefficients, we have : 
+			\[
+				I * y_f = (I * x_f) - (I * m_f) = (I * x_f) - m \times (I * \textbf{1}_f)
+			\]
+			The $(I * \textbf{1}_f)$ correction part is independent of the filter and proportional to the mean coefficient value. The practical impact is clearer in the frequency space. Let us denote by $\rightleftharpoons_\mathcal{F}$ the Fourier transform : 
+			\begin{align*}
+				I &\rightleftharpoons_\mathcal{F} U
+				x_f &\rightleftharpoons_\mathcal{F} H_x
+				m_f &\rightleftharpoons_\mathcal{F} H_m
+				y_f &\rightleftharpoons_\mathcal{F} H_y = H_x - H_m
+			\end{align*}
+			\[
+				I * y_f \rightleftharpoons W = U \times H_y = U \times (H_x - H_m) = (U \times H_x) - (U \times H_m) = Y - (U \times H_m)
+			\]
+			Since $m_f$ is a constant signal, the transfer function $H_m$ is null everywhere except at the origin. Thus, the overall frequency response is only marginally modified and both filter achieve the same results.
+			Therefore, the normalization does not restrict the class of filters.
+			
+			\paragraph{Unit variance normalization.}
+			In $\mathbb{R}^n$, the unit variance filters form the hypersphere $\{x \in \mathbb{R}^n | x^{T}x = 1\}$. However, in practice, the normalization works with the current filter size and not the maximum filter size. Thus, there are several hyperspheres to consider, one per possible size. 
+			In the filter space, the normalization equals to scaling the filter so as to meet the appropriate hypersphere. The impact on filtering is immediate :
+			\[
+				I * y_f = I * (\frac{1}{\sigma_x} x_f) = \frac{1}{\sigma_x} (I * x_f)
+			\]
+			The whole result is scaled by the same factor. Therefor, the normalization does not restrict the class of filters.
+			
+			\paragraph{Unit sum normalization}
+			The reasoning is identical to the zero mean normalization except for the hyperplane : $\{x \in \mathbb{R}^n | \textbf{1}^{T}x = 1\}$. This normalization does not restrict the class of filters either. 
+			
+			
+			\subsubsection{Filter application}%Border policy for filtering, working with colors
+			In this subsection, we cover two topics about the filter application. The first one concerns working with colors. The second one is about how the filter are actually applied. 
+			\paragraph{}
+			Handling colors can be done in three ways. 
+			The first one, is to realize a 3D convolution. This results in a single output value per original pixel. However, there are two drawbacks to this approach. Firstly, in the spatial space, it means combining values of different colors together. This would work but lacks of physical interpretation. Indeed, the RGB space is only a convention. The second drawbacks has to do with the frequency space. It feels awkward to put on a same level spatial frequencies and color frequency, whatever it might mean.
+			\par
+			The second method to handle colors is to use separate 2D filters on each channel. This produces three values per original pixels. As for the last and simplest method, is to use the same 2D filters on each color. This also produces three values per original pixels.
+			Because the last approach seems more natural than the first one and is simpler to interpret, it is the one we adopted.
+			\paragraph{}
+			Now that we know how to handle colors, let us investigate the filter application.
+			The convolution is carried out in the frequency space by multiplying the Fourier transform of the original image by the transfer function of the filter. The output is of the same size as the original image. The borders are handled by padding the original image with zeros.
+			
 		\subsection{Pooling goals and strategies}
-			\subsubsection{Aggregations}
-			\subsubsection{Moving windows}
+		Now that we have fully covered the filter generation and application mechanisms, we can move on to the next part concerning the spatial pooling.
+			\paragraph{Moving windows.}
+			In the case of spatial pooling by moving windows, two elements are needed : the moving window size and the pooling function. Windows are supposed to have odd width and height. The center of the window moves to match every pixel of image. The pooling function is computed on the overlapping part of the window and the image. The resulting image as the same size as the original image.
+			\paragraph{Aggregations.}
+			In the case of spatial pooling by aggregation, the neighborhood windows do not overlap. The image is divided into several non overlapping neighborhood such that each neighborhood has the appropriate size. The pooling function is then applied on each cell of this neighborhood grid. Thus, contrary to moving windows, the resulting image is smaller and correspond to the neighborhood grid layout.
+			\paragraph{Pooling functions.}
+			The pooling function box is comprise of the minimum, maximum and average functions. In the case of the average function with moving window, we are close to defining a composition of two linear filters. The difference comes from the way the border are handled. In the case of the application of the linear filter, the outside element are replaced by zero while they are ignored in the pooling case.
+			
 		\subsection{Subwindows extraction}
+		Once the generated filters and the spatial poolings have been applied, it is time to extract subwindows from the image. Extracting subwindows has several advantages. 
+		Firstly, it expands the number of objects. Depending on the feature descriptor extraction mechanism, there may be numerous features describing a given image. Using less features but more objects performs usually better. As we mentioned earlier, this is especially true with trees, at least for the ``more objects'' part, where a greater database means a greater tree and therefore a more complex model.
+		Secondly, this approach is more robust towards ...%TODO obstruction and stuff
+		Lastly, it can be used as a zone of interest detection system. %TODO ref zebrafish
+		
+		\paragraph{}
+		The number of possible subwindows is vast. %TODO stuff with number of subwindow
+		
+		\paragraph{}
+		As we can see, there are numerous subwindows. Nevertheless, not all are of interests. The small size subwindows do not bring much information. For instance, taking only one pixel is not interesting. Delimiting a good threshold on the size is problem dependent, however. Despite focusing on big enough subwindows, there may still be too many of them. Since it would be difficult to establish a general heuristic to choose good candidates, we resort to drawing them randomly. 
+		At this point we have to be careful. Since we want to describe together all, \textit{i.e.} within the same feature vector, the filtered images in a coherent fashion, we need to extract the same subwindows on all the filtered image belonging to the same original one. The filtering and pooling aim is to better describe a subwindow. However, for two different original images, we may choose two different sets of subwindows.
+		By hypothesis, the chance of drawing twice the same subwindows for a given original image is small.
+		
+		\paragraph{}
+		Although the subwindows can have different sizes, the feature vector describing a particular subwindows cannot. More specifically, a column of the learning matrix must correspond to a well
+		%TODO interpolation : all the same number of features
+		
 		\subsection{Feature descriptions}
 		%TODO : feature evaluation --> by filter
-		\subsection{Compression layer}
+		%\subsection{Compression layer}
 		\subsection{Classification schemes}
 			\subsubsection{Direct classification}
 			\subsubsection{Feature learning scheme}
 	\section{Database and environment}
-	%CIFAR-10. Several important results. 288 Go de ram dont 145 en shm. 30 core. frequency ?			
+	%CIFAR-10 : Several important results. 288 Go de ram dont 145 en shm. 30 core. frequency ?			
 	\section{Implementation}
 		\subsection{Software architecture}
 		\subsection{Technical issues}
