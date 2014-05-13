@@ -360,33 +360,70 @@ This chapter is divided into three sections. The first one aims at fully describ
 			
 		\subsection{Subwindows extraction}
 		Once the generated filters and the spatial poolings have been applied, it is time to extract subwindows from the image. Extracting subwindows has several advantages. 
-		Firstly, it expands the number of objects. Depending on the feature descriptor extraction mechanism, there may be numerous features describing a given image. Using less features but more objects performs usually better. As we mentioned earlier, this is especially true with trees, at least for the ``more objects'' part, where a greater database means a greater tree and therefore a more complex model.
+		Firstly, it expands the number of learning objects. Depending on the feature descriptor extraction mechanism, there may be numerous features describing a given image. Using less features but more objects performs usually better. As we mentioned earlier, this is especially true with trees, at least for the ``more objects'' part, where a greater database means a greater tree and therefore a more complex model.
 		Secondly, this approach is more robust towards ...%TODO obstruction and stuff
 		Lastly, it can be used as a zone of interest detection system. %TODO ref zebrafish
+		While expanding the number of learning objects, we also need to to expand the class label accordingly. Consequently, each subwindows will be described by the label of its original image.
 		
 		\paragraph{}
-		The number of possible subwindows is vast. %TODO stuff with number of subwindow
+		The number of possible subwindows is quite vast. %TODO stuff with number of subwindow
+		First, let us notice that the number of subwindows of size $a \times b$ ($N(a,b)$) factorizes into the product of the number of subwindows along each axis : $N_v(a) \times N_h(b)$. These can be computed easily as $N_v(a) = H - a + 1$, where $H$ represents the height of the image and similarly for $N_h(b)$, which depends on the width $W$. Indeed, for a column of size $H$, there is $H$ origins of 1 pixel subwindows. If we take subwindows of size 2, we can take all the same origins as previously except the last one. Subwindows of size 3 cannot take the last two compare to 1 pixel subwindows, and so on.
+		Therefore, the total number of subwindows $N$ is :
+		\[
+			N = \sum_{a=1}^H \sum_{b=1}^W N(a,b) = \sum_{a=1}^H \sum_{b=1}^W (H-a+1)(W-b+1) = frac{1}{4}(H^2W^2 + H^2 W + H W^2 + HW)
+		\]
+		For 32x32 images, this yields 278,784 subwindows !
 		
 		\paragraph{}
-		As we can see, there are numerous subwindows. Nevertheless, not all are of interests. The small size subwindows do not bring much information. For instance, taking only one pixel is not interesting. Delimiting a good threshold on the size is problem dependent, however. Despite focusing on big enough subwindows, there may still be too many of them. Since it would be difficult to establish a general heuristic to choose good candidates, we resort to drawing them randomly. 
+		As we can see, there are numerous subwindows. Nevertheless, not all are of interests. The small size subwindows do not bring much information. For instance, taking only one pixel is not interesting. Delimiting a good threshold on the size is problem dependent, however. Despite focusing on big enough subwindows, there may still be too many of them. For instance, on 32x32 images, there are still 2025 subwindows of sizes ranging from 24x24 to 32x32.
+		Since it would be difficult to establish a general heuristic to choose good candidates, we resort to drawing them randomly. 
 		At this point we have to be careful. Since we want to describe together all, \textit{i.e.} within the same feature vector, the filtered images in a coherent fashion, we need to extract the same subwindows on all the filtered image belonging to the same original one. The filtering and pooling aim is to better describe a subwindow. However, for two different original images, we may choose two different sets of subwindows.
-		By hypothesis, the chance of drawing twice the same subwindows for a given original image is small.
+		By hypothesis, the chance of drawing twice the same subwindow for a given original image is small.
+		We start by drawing the size uniformly in the affordable range. Then the upper left position of the subwindow is drawn from the possible position considering the subwindow size.
 		
 		\paragraph{}
-		Although the subwindows can have different sizes, the feature vector describing a particular subwindows cannot. More specifically, a column of the learning matrix must correspond to a well
+		Since the subwindows are chosen uniformly, we can compute the probability of a given pixel belonging to a subwindow by counting the number of subwindows containing that pixel and dividing it by the total number of subwindows. Once again, we will use the fact that we can factorize the numbering for each axis. We will proceed by recurrence. Let us take a column of height $H$ and index the element starting at 1 for the top element and ending at $H$ for the bottom one. We will denote by $T(i)$ the number of subwindows encompassing the ith element. It is immediate that $T(1) = H$ : only one subwindow of each length can contain the first element. By symmetry this is also the case for the last element : $T(H) = H$. The second element is encompassed by all the subwindows of the first one but for the one-pixel subwindow. Besides this, we have to add the $H-1$ subwindows starting at this element. Therefore, $T(2) = T(1) - 1 + (H -1)$. The reasoning is similar for the next one, the only difference being that now we have to substract two previous windows from $T(2)$ : the monopixel one starting at element 2 and the bipixel one starting at element 1 (its monopixel has already been removed). Thus, $T(3) = T(2) - 2 + (H - 2)$. Expanding the reasoning we get the general formula $T(n) = T(n-1) - (n-1) + H - (n-1) = T(n-1) + H - 2(n-1)$. Resolving the recurrence yields $T(n) = nH - n(n+1) + 2n = nH -n^2 + n$, which verifies $T(1) = T(H) = H$. 
+		Coming back to the 2D case, we have that for a pixel $(r,c)$, the probability of belonging to the subwindow is $T(r,c) = (rH - r^2 + r) \times (cW - c^2 + c)$.
+		
+		\paragraph{}
+		Although the subwindows can have different sizes, the feature vector describing a particular subwindows cannot. More specifically, a column of the learning matrix must correspond to a well identified variable. Thus, we need to rescale all the subwindows to a common size. Ideally, the size should be chosen so as to minimize the reinterpolation error. The interpolation algorithms are nearest neighbor, bilinear and bicubic. We will focus on the nearest neighbor because it is the one that interfere less with the filtering.
 		%TODO interpolation : all the same number of features
 		
-		\subsection{Feature descriptions}
-		%TODO : feature evaluation --> by filter
+		\subsection{Feature descriptions}		
+		Starting from the original database of $M$ images, a set of $N$ filters and $P$ spatial poolings, we produced $N \times P$ images for each original ones. From each of those $M$ sets, we extracted $S$ subwindows on each of the $N \times P$ filter images. We now have $M \times S$ learning objects described by $N \times P$ complex structures. We will describe each structure by a feature vector and concatenate all the feature vectors corresponding to the same subwindow.
+		\paragraph{}
+		Each filtered and spatial pooled image will be described by its raw pixels in a last-dimension-first fashion. Therefore, we start by the color dimension and group the three color values of the top left pixel together. Then we append the second pixel (top row, second pixel from the left) and so on for all pixels of the first row. After that, we append the second line in the same fashion and so on for all the image.
+		Thus, there are $3(h \times w) \times (N \times P)$ features per subwindows. For instance, 100 filters with 1 pooling on 16x16 subwindows yields feature vector of $3(16 \times 16) \times 100 = 76,800$ variables.
+		
 		%\subsection{Compression layer}
 		\subsection{Classification schemes}
+		The previous subsections cover the preprocessing steps to go from a database of images to an actual learning matrix. Now is time to delve into the actual classification mechanism. We will use two approaches described in the following. 
+		
 			\subsubsection{Direct classification}
+			In this variant, classification will be undertaken by a special kind of classification forest : ensemble of extremely randomized trees, also known as ExtraTrees. They were introduce in \ref{} and resemble random forest \ref{}. In both kind of forests, only a subset of the features are examined at each node to determine the splitting criterion. They differ in the following way : while random forests use bagging as a extra mechanism to introduce randomness, the ExtraTrees determine the splitting thresholds randomly. Bagging, for bootstrap aggregating, is the fact of drawing with replacement several learning samples from the original one (boostrap) and combining their predictions (aggregating). 
+			The advantage of ExtraTrees over random forests in threefold. Firstly, the bagging introduces an effective reduction of the learning size of 36\% for each tree. This is not the case of the ExtraTrees, where all trees can learn from the whole learning sample. Secondly, they are much faster to build since we do not need to pick the optimal splitting thresholds of all the variables examined in a node. Lastly, they tend to perform better than their counterpart.%Need ref
+			In this variant, also called ET-DIC (ExtraTrees for direct image classification), the classification is undertaken by the ExtraTrees directly.
+			Let us note that this scheme allows not only for feature importance evaluation but also for filter relevance evaluation by aggregating the importance of all the features corresponding to a given filter. %word about the (co-)usefulness ?
+			%Recap hyper-parameters ?
+			
+			
+			
 			\subsubsection{Feature learning scheme}
+			Also called ET-FL (ExtraTrees for feature learning), this variant was introduce in \ref{}. The ExtraTrees are not used as classifier any longer. They form a preprocessing step whose output will constitute the learning matrix of the actual classifier. The idea is to use the trees to form visual dictionary. Specifically, ExtraTrees are used in an unsupervised way by selecting randomly the splitting criterion of each node, a variant called totally randomized trees. The dictionary words are composed of $T$ parts of different sizes, where $T$ is the number of trees. Each part encodes the index of the leave where a given object ends up in a one-hot fashion. Thus, the part corresponding to a tree with $L$ leaves will be a binary word with $L-1$ zeros and $1$ one. In the learning phase, the totatlly randomized trees are grown from the learning sample, then the same learning sample is propagated down the tree to form the new learning matrix, which is quite sparse. Since we are using several subwindows per original image, we can aggregate by summing bitwisely the words corresponding to the original image to form a new word : an histogram word.
+			The actual classification is then undertaken by a Support Machine Vector (SVM). %Describe SVM ?
+			Two remarks are in order. Firstly, we have lost the ability the evaluate the feature importances. Secondly, the learning size, and consequently the number of subwindows, is now crucially important. Indeed, of all the parameters, it is clearly this one that will influence the depth, and therefore, the number of leaves the most. 
+			%Recap hyper-parameters ?
+			
 	\section{Database and environment}
 	%CIFAR-10 : Several important results. 288 Go de ram dont 145 en shm. 30 core. frequency ?			
 	\section{Implementation}
 		\subsection{Software architecture}
 		\subsection{Technical issues}
+		
+		
+%TODO : feature evaluation --> by filter
+
+		
 \chapter{Result analysis}
 \paragraph
 In this chapter, we describe the experiments conducted with our new classification method and analyze their results. The chapter is divided into two sections. The first one tackles the direct classification scheme, where the forest of extremely randomized trees serves as classificator. The second section describes the other variant where the extremely randomized trees are used to create a visual dictionary, while the actual classification is undergone by a support vector machine.
