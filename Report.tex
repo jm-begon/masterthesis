@@ -1,16 +1,18 @@
 % !TEX encoding = UTF-8
 \documentclass[a4paper]{report}
-
+%Options: Sonny, Lenny, Glenn, Conny, Rejne, Bjarne, Bjornstrup
+%Nice ones : Lenny, Glenn, Bjornstrup
+\usepackage[Lenny]{fncychap}
 \usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
 \usepackage[T1]{fontenc}
+
 
 
 %math 
 \usepackage{amsmath} %Normal math
 \usepackage{amssymb} %Math symbols
 \usepackage{centernot}
-
 
 %Chimie
 %\usepackage[version=3]{mhchem}
@@ -56,7 +58,29 @@
 \renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}} 
 % Ligne de points dans la table des matières
 
+
+%Adds bibliography to the ToC
+\usepackage{tocbibind}
+%notbib to remove the Bibliography notindex to remove the Index 
+%nottoc to remove the Table of Contents 
+%notlof to remove the List of Figures 
+%notlot to remove the List of Tables - See more at: http://www.howtotex.com/packages/how-to-add-bibliography-and-more-to-table-of-contents/#sthash.gea9BJsw.dpuf
+
+%Citation for bibliography. Use :
+%\citet{KEY} --> Bester et al. (1998)
+%\citep{KEY} --> (Bester et al. 1998)
+\usepackage{natbib}
+
+
 \DeclareGraphicsExtensions{.png}
+
+
+\setcounter{secnumdepth}{3} %depth of numbering
+%\setcounter{tocdepth}{3} %depth of table of content
+
+%change item style
+%\bullet (default), \circ  \triangleright, \divideontimes, \circledcirc  \bigstar \models \vdash \vDash \Vdash \circlearrowleft \circlearrowright \looparrowright (nice) \Psi \crux \heartsuit \clubsuit \spadesuit \surd \diamondsuit \blacktriangle \blacksquare \blacklozenge \blacktriangledown \sphericalangle \propto \maltese (nice) \checkmark
+\def\labelitemi{$\looparrowright$} 
 
 
 %Page de garde
@@ -74,12 +98,13 @@
   \bigskip
   \bigskip
   \bigskip
-  \bigskip
+  \bigskip 
   \bigskip
 
 
   % Upper part of the page 
   \includegraphics[width=3cm]{./logo}\\[1cm]
+	%\includegraphics[bb=0 0 30 30]{./logo}\\[1cm]
   \smallskip
   \textsc{\LARGE Université de Liège}\\
   \smallskip
@@ -150,8 +175,8 @@
 \pagestyle{fancy}
 \lhead{}
 \chead{}
-\rhead{\itshape \textcolor{gris}{Image classification with extremely randomized trees}}
-\lfoot{\itshape \textcolor{gris}{a new feature extraction scheme}}
+\rhead{\itshape \textcolor{gris}{Generic image classification}}
+\lfoot{\itshape \textcolor{gris}{The RandConv framework}}
 \cfoot{}
 \rfoot{\itshape \textcolor{gris}{\thepage}}
 \renewcommand{\headrulewidth}{0.4pt}
@@ -189,7 +214,7 @@ The in-depth description of this ``RandConv'' method is the main subject of chap
 
 \chapter{Methodology}
 \label{chap:methodo}
-\paragraph
+\paragraph{}
 This chapter is divided into three sections. The first one aims at fully describing our classification method. The second section details the experimental condition in which our method will be evaluated. Finally, the last one highlights implementation details and technical issues.
 	\section{The RandConv framework}
 	\paragraph{}
@@ -285,10 +310,7 @@ This chapter is divided into three sections. The first one aims at fully describ
 			Therefore, playing with closeness or dissimilarities in the filter space yield no warranty about the same metrics with the filtered images. However, using the distance as measure of co-usefulness is arguably a poor choice, since close images might still highlight different aspects of the images. Considering this remark, the main shortcoming of the stratified generator is probably that, with respect to the number of generated filters we will use, it  does not produce any significant advantage over other generators.
 			
 			
-			
-			
-			
-			
+
 			
 			\subsubsection{Normalization}
 			%Justification, impact on the filter space, spatial interpretation & impact, spectral interpretation & impact
@@ -400,7 +422,7 @@ This chapter is divided into three sections. The first one aims at fully describ
 		The previous subsections cover the preprocessing steps to go from a database of images to an actual learning matrix. Now is time to delve into the actual classification mechanism. We will use two approaches described in the following. 
 		
 			\subsubsection{Direct classification}
-			In this variant, classification will be undertaken by a special kind of classification forest : ensemble of extremely randomized trees, also known as ExtraTrees. They were introduce in \ref{} and resemble random forest \ref{}. In both kind of forests, only a subset of the features are examined at each node to determine the splitting criterion. They differ in the following way : while random forests use bagging as a extra mechanism to introduce randomness, the ExtraTrees determine the splitting thresholds randomly. Bagging, for bootstrap aggregating, is the fact of drawing with replacement several learning samples from the original one (boostrap) and combining their predictions (aggregating). 
+			In this variant, classification will be undertaken by a special kind of classification forest : ensemble of extremely randomized trees, also known as ExtraTrees. They were introduce in \ref{} and resemble random forest (\cite{randomforests}). In both kind of forests, only a subset of the features are examined at each node to determine the splitting criterion. They differ in the following way : while random forests use bagging as a extra mechanism to introduce randomness, the ExtraTrees determine the splitting thresholds randomly. Bagging, for bootstrap aggregating, is the fact of drawing with replacement several learning samples from the original one (boostrap) and combining their predictions (aggregating). 
 			The advantage of ExtraTrees over random forests in threefold. Firstly, the bagging introduces an effective reduction of the learning size of 36\% for each tree. This is not the case of the ExtraTrees, where all trees can learn from the whole learning sample. Secondly, they are much faster to build since we do not need to pick the optimal splitting thresholds of all the variables examined in a node. Lastly, they tend to perform better than their counterpart.%Need ref
 			In this variant, also called ET-DIC (ExtraTrees for direct image classification), the classification is undertaken by the ExtraTrees directly.
 			Let us note that this scheme allows not only for feature importance evaluation but also for filter relevance evaluation by aggregating the importance of all the features corresponding to a given filter. %word about the (co-)usefulness ?
@@ -409,7 +431,7 @@ This chapter is divided into three sections. The first one aims at fully describ
 			
 			
 			\subsubsection{Feature learning scheme}
-			Also called ET-FL (ExtraTrees for feature learning), this variant was introduce in \ref{}. The ExtraTrees are not used as classifier any longer. They form a preprocessing step whose output will constitute the learning matrix of the actual classifier. The idea is to use the trees to form visual dictionary. Specifically, ExtraTrees are used in an unsupervised way by selecting randomly the splitting criterion of each node, a variant called totally randomized trees. The dictionary words are composed of $T$ parts of different sizes, where $T$ is the number of trees. Each part encodes the index of the leave where a given object ends up in a one-hot fashion. Thus, the part corresponding to a tree with $L$ leaves will be a binary word with $L-1$ zeros and $1$ one. In the learning phase, the totatlly randomized trees are grown from the learning sample, then the same learning sample is propagated down the tree to form the new learning matrix, which is quite sparse. Since we are using several subwindows per original image, we can aggregate by summing bitwisely the words corresponding to the original image to form a new word : an histogram word.
+			Also called ET-FL (ExtraTrees for feature learning), this variant was introduce in \cite{ETFL}. The ExtraTrees are not used as classifier any longer. They form a preprocessing step whose output will constitute the learning matrix of the actual classifier. The idea is to use the trees to form visual dictionary. Specifically, ExtraTrees are used in an unsupervised way by selecting randomly the splitting criterion of each node, a variant called totally randomized trees. The dictionary words are composed of $T$ parts of different sizes, where $T$ is the number of trees. Each part encodes the index of the leave where a given object ends up in a one-hot fashion. Thus, the part corresponding to a tree with $L$ leaves will be a binary word with $L-1$ zeros and $1$ one. In the learning phase, the totatlly randomized trees are grown from the learning sample, then the same learning sample is propagated down the tree to form the new learning matrix, which is quite sparse. Since we are using several subwindows per original image, we can aggregate by summing bitwisely the words corresponding to the original image to form a new word : an histogram word.
 			The actual classification is then undertaken by a Support Machine Vector (SVM). %Describe SVM ?
 			Two remarks are in order. Firstly, we have lost the ability the evaluate the feature importances. Secondly, the learning size, and consequently the number of subwindows, is now crucially important. Indeed, of all the parameters, it is clearly this one that will influence the depth, and therefore, the number of leaves the most. 
 			%Recap hyper-parameters ?
@@ -420,17 +442,18 @@ This chapter is divided into three sections. The first one aims at fully describ
 		\subsection{Software architecture}
 		\subsection{Technical issues}
 		
-		
 %TODO : feature evaluation --> by filter
 
 		
 \chapter{Result analysis}
-\paragraph
+\paragraph{}
 In this chapter, we describe the experiments conducted with our new classification method and analyze their results. The chapter is divided into two sections. The first one tackles the direct classification scheme, where the forest of extremely randomized trees serves as classificator. The second section describes the other variant where the extremely randomized trees are used to create a visual dictionary, while the actual classification is undergone by a support vector machine.
 	\section{Direct classification scheme}
 	\section{Feature learning scheme}
 \chapter{Conclusion and perspective}
  
+\bibliographystyle{apalike}
+\bibliography{biblio}
   
 \end{document}	
 
