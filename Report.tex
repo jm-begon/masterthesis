@@ -192,7 +192,6 @@
 \chapter{State of the art}
 
 \chapter{Objectives}
-\paragraph{}
 The hypothesis at the core of the present master thesis can be stated as follows : 
 \begin{quote}
 It is possible to combine the advantages of the classification forests, namely computational cost, feature importance evaluation and ease of use, with those of convolutional networks, primarily the accuracy.
@@ -208,7 +207,7 @@ Lastly, let us mention an interesting characteristic of convolutional networks w
 \paragraph{}
 Validating this hypothesis constitutes our main objective. To achieve this, we developed a method based on classification forests which incorporates some convolutional networks mechanics. More specifically, random linear filters are applied to the image database, followed by one or several spatial poolings. Then, several random subwindows are extracted from each transformed image. Each subwindow is described by the row pixel values.
 The in-depth description of this ``RandConv'' method is the main subject of chapter \ref{chap:methodo}.
-	This method builds on previous works. The idea of applying predefined convolutional filters followed by several spatial poolings before extracting subwindows has already been done in \ref{}. It constituted a generalization of their generic image classification scheme. The contribution of the current paper is two fold. 
+	This method builds on previous works. The idea of applying predefined convolutional filters followed by several spatial poolings before extracting subwindows has already been done in \cite{}. It constituted a generalization of their generic image classification scheme. The contribution of the current paper is two fold. 
 	Firstly, the RandConv framework proposes several extensions of that method, the most noticeable of which being the ability to generate the filters. This approach resembles much more the convolution networks', where the filters are actually learned.
 	Secondly, whereas the aforementioned work was more like a proof of concept, the present study aim at analyzing more deeply this method. Indeed, proving the hypothesis is not our only goal. We also want to study closely the behavior of our classification method so as to understand its strength and limitations.
 
@@ -250,7 +249,6 @@ This chapter is divided into three sections. The first one aims at fully describ
 			
 			
 			\subsubsection{Drawing mechanism}
-			\paragraph{}
 			How to draw the filters is one of the RandConv framework cornerstone. The drawing mechanism should meet two prerequisites. Firstly, it should be able to produce unlimited, or at the least great, number of different filters. Secondly, the filters should be of some value by themselves but also together. Intuitively, a valuable filter should highlight ``information'' not directly accessible from the original image by the learning algorithm. We will call this characteristic the individual usefulness or simply usefulness. As for having value together, two different filters should not uncover the exact same ``information''. For instance, producing twice the same filter is useless. We will call this the group usefulness or co-usefulness.
 			
 			\paragraph{}
@@ -268,7 +266,7 @@ This chapter is divided into three sections. The first one aims at fully describ
 			The first one is a special case. It consists of a set of 38 well known filter, among which the Sobel and Prewitt filters, several Laplacian filters of different sizes, the compass gradient filters, some low and high pass filters and other line detection filters.
 			%\begin{multicols}{3}
 			%\end{multicols}
-			Being a small set, it violates the first prerequisite. However, this pseudo filter generator will be useful as a comparison basis : the filter are the same ones as in \ref{}. Besides, these filters have practical application cases which random filters might not share. It is thus a reference point to see whether the generated filters highlight interesting ``information''.
+			Being a small set, it violates the first prerequisite. However, this pseudo filter generator will be useful as a comparison basis : the filter are the same ones as in \cite{}. Besides, these filters have practical application cases which random filters might not share. It is thus a reference point to see whether the generated filters highlight interesting ``information''.
 			\paragraph{}
 			The other mechanism draw randomly the filters. Before generating the coefficients of a filter, its dimensions must first be determined. The widths and heights of the impulse response matrices are drawn from an bounded set of odd, positive integers. Although we limited our tests to square matrices, this is not a strict requirement.
 			We mainly worked with a uniform distribution of sizes, playing somewhat with the set bounds. Once again, this is not a limitation as other distribution can easily be used. For example, it is possible to create a distribution biasing towards small sizes. 
@@ -298,14 +296,14 @@ This chapter is divided into three sections. The first one aims at fully describ
 				J_2 &= I * F_2 \\
 			\end{align*}
 			We will show by counterexample that $\parallel F - F_1 \parallel \geq \parallel F - F_2 \parallel \centernot\implies \parallel J - J_1 \parallel \geq \parallel J - J_2 \parallel$.
-			First let us name $e_1 = F - F_1$ and $e_2 = F - F_2$. By linearity of the convolutional operation, we have :
+			First let us name $e_1 = F - F_1$ and $e_2 = F - F_2$. By linearity of the convolution, we have :
 			\[
 				J_1 = I * F_1 =  I * (F - e_1) = (I * F) - (I * e_1) = J - (I * e_1)
 				\iff
 				J - J_1 = I * e_1
 			\]
 			In these terms, we have to show that $\parallel e_1 \parallel \geq \parallel e_2 \parallel \centernot\implies \parallel I * e_1 \parallel \geq \parallel I * e_2 \parallel$. 
-			Let us take $e_1$ such that the coefficients sum up to zero but with a great dispersion and $e_2$ such that the sum of the coefficient is strictly greater than zero but with a smaller dispersion than $e_1$. Thus, we have  $\parallel e_1 \parallel \geq \parallel e_2 \parallel$. Moreover, let us consider the case of a image $I$ with constant value $c > 0$. In this setting, $\parallel I * e_1 \parallel = 0$ while $\parallel I * e_2 \parallel = c \times k > \parallel I * e_1 \parallel$.
+			Let us take $e_1$ such that the coefficients sum up to zero but with a great dispersion (a Sobel filter, for example) and $e_2$ such that the sum of the coefficients is strictly greater than zero but with a smaller dispersion than $e_1$ (the 3x3 average filter, for instance). Thus, we have  $\parallel e_1 \parallel \geq \parallel e_2 \parallel$. Moreover, let us consider the case of a image $I$ with constant value $c > 0$. In this setting, $\parallel I * e_1 \parallel = 0$ while $\parallel I * e_2 \parallel = c \times k > \parallel I * e_1 \parallel$.
 			\par
 			Therefore, playing with closeness or dissimilarities in the filter space yield no warranty about the same metrics with the filtered images. However, using the distance as measure of co-usefulness is arguably a poor choice, since close images might still highlight different aspects of the images. Considering this remark, the main shortcoming of the stratified generator is probably that, with respect to the number of generated filters we will use, it  does not produce any significant advantage over other generators.
 			
@@ -381,10 +379,10 @@ This chapter is divided into three sections. The first one aims at fully describ
 			The pooling function box is comprise of the minimum, maximum and average functions. In the case of the average function with moving window, we are close to defining a composition of two linear filters. The difference comes from the way the border are handled. In the case of the application of the linear filter, the outside element are replaced by zero while they are ignored in the pooling case.
 			
 		\subsection{Subwindows extraction}
-		Once the generated filters and the spatial poolings have been applied, it is time to extract subwindows from the image. Extracting subwindows has several advantages. 
+		Once the generated filters and the spatial poolings have been applied, it is time to extract subwindows from the images. Extracting subwindows has several advantages. 
 		Firstly, it expands the number of learning objects. Depending on the feature descriptor extraction mechanism, there may be numerous features describing a given image. Using less features but more objects performs usually better. As we mentioned earlier, this is especially true with trees, at least for the ``more objects'' part, where a greater database means a greater tree and therefore a more complex model.
 		Secondly, this approach is more robust towards ...%TODO obstruction and stuff
-		Lastly, it can be used as a zone of interest detection system. %TODO ref zebrafish
+		Lastly, it can be used as a zone of interest detection system, see for example \cite{maree2006biological}. This is an computationally interesting and domainfree alternative to other techniques. Although this is not the focus of the present work, the RandConv method retains this capability as well.
 		While expanding the number of learning objects, we also need to to expand the class label accordingly. Consequently, each subwindows will be described by the label of its original image.
 		
 		\paragraph{}
@@ -392,24 +390,23 @@ This chapter is divided into three sections. The first one aims at fully describ
 		First, let us notice that the number of subwindows of size $a \times b$ ($N(a,b)$) factorizes into the product of the number of subwindows along each axis : $N_v(a) \times N_h(b)$. These can be computed easily as $N_v(a) = H - a + 1$, where $H$ represents the height of the image and similarly for $N_h(b)$, which depends on the width $W$. Indeed, for a column of size $H$, there is $H$ origins of 1 pixel subwindows. If we take subwindows of size 2, we can take all the same origins as previously except the last one. Subwindows of size 3 cannot take the last two compare to 1 pixel subwindows, and so on.
 		Therefore, the total number of subwindows $N$ is :
 		\[
-			N = \sum_{a=1}^H \sum_{b=1}^W N(a,b) = \sum_{a=1}^H \sum_{b=1}^W (H-a+1)(W-b+1) = frac{1}{4}(H^2W^2 + H^2 W + H W^2 + HW)
+			N = \sum_{a=1}^H \sum_{b=1}^W N(a,b) = \sum_{a=1}^H \sum_{b=1}^W (H-a+1)(W-b+1) = \frac{1}{4}(H^2W^2 + H^2 W + H W^2 + HW)
 		\]
 		For 32x32 images, this yields 278,784 subwindows !
 		
 		\paragraph{}
-		As we can see, there are numerous subwindows. Nevertheless, not all are of interests. The small size subwindows do not bring much information. For instance, taking only one pixel is not interesting. Delimiting a good threshold on the size is problem dependent, however. Despite focusing on big enough subwindows, there may still be too many of them. For instance, on 32x32 images, there are still 2025 subwindows of sizes ranging from 24x24 to 32x32.
+		As we can see, there are numerous subwindows. Nevertheless, not all are of interests. The small size subwindows do not bring much information. For instance, taking only one pixel is not interesting. Delimiting a good threshold on the size is problem dependent, however. Despite focusing on big enough subwindows, there may still be too many of them. For instance, on 32x32 images, there are still 2025 subwindows of sizes ranging from 24x24 to 32x32. Nevertheless, this entails a redundancy level which is not needed.
 		Since it would be difficult to establish a general heuristic to choose good candidates, we resort to drawing them randomly. 
 		At this point we have to be careful. Since we want to describe together all, \textit{i.e.} within the same feature vector, the filtered images in a coherent fashion, we need to extract the same subwindows on all the filtered image belonging to the same original one. The filtering and pooling aim is to better describe a subwindow. However, for two different original images, we may choose two different sets of subwindows.
 		By hypothesis, the chance of drawing twice the same subwindow for a given original image is small.
 		We start by drawing the size uniformly in the affordable range. Then the upper left position of the subwindow is drawn from the possible position considering the subwindow size.
 		
 		\paragraph{}
-		Since the subwindows are chosen uniformly, we can compute the probability of a given pixel belonging to a subwindow by counting the number of subwindows containing that pixel and dividing it by the total number of subwindows. Once again, we will use the fact that we can factorize the numbering for each axis. We will proceed by recurrence. Let us take a column of height $H$ and index the element starting at 1 for the top element and ending at $H$ for the bottom one. We will denote by $T(i)$ the number of subwindows encompassing the ith element. It is immediate that $T(1) = H$ : only one subwindow of each length can contain the first element. By symmetry this is also the case for the last element : $T(H) = H$. The second element is encompassed by all the subwindows of the first one but for the one-pixel subwindow. Besides this, we have to add the $H-1$ subwindows starting at this element. Therefore, $T(2) = T(1) - 1 + (H -1)$. The reasoning is similar for the next one, the only difference being that now we have to substract two previous windows from $T(2)$ : the monopixel one starting at element 2 and the bipixel one starting at element 1 (its monopixel has already been removed). Thus, $T(3) = T(2) - 2 + (H - 2)$. Expanding the reasoning we get the general formula $T(n) = T(n-1) - (n-1) + H - (n-1) = T(n-1) + H - 2(n-1)$. Resolving the recurrence yields $T(n) = nH - n(n+1) + 2n = nH -n^2 + n$, which verifies $T(1) = T(H) = H$. 
-		Coming back to the 2D case, we have that for a pixel $(r,c)$, the probability of belonging to the subwindow is $T(r,c) = (rH - r^2 + r) \times (cW - c^2 + c)$.
+		Since the subwindows are chosen uniformly, we can compute the probability of a given pixel belonging to a subwindow by counting the number of subwindows containing that pixel and dividing it by the total number of subwindows. Once again, we will use the fact that we can factorize the numbering for each axis. We will proceed by recurrence. Let us take a column of height $H$ and index the element starting at 1 for the top element and ending at $H$ for the bottom one. We will denote by $T(i)$ the number of subwindows encompassing the ith element. It is immediate that $T(1) = H$ : only one subwindow of each length can contain the first element. By symmetry this is also the case for the last element : $T(H) = H$. The second element is encompassed by all the subwindows of the first one but for the one-pixel subwindow. Besides this, we have to add the $H-1$ subwindows starting at this element. Therefore, $T(2) = T(1) - 1 + (H -1)$. The reasoning is similar for the next one, the only difference being that now we have to substract two previous windows from $T(2)$ : the monopixel one starting at element 2 and the bipixel one starting at element 1 (its monopixel has already been removed). Thus, $T(3) = T(2) - 2 + (H - 2)$. Expanding the reasoning we get the general formula $T(n) = T(n-1) - (n-1) + H - (n-1) = T(n-1) + H - 2(n-1)$. Resolving the recurrence yields $T(n) = nH - n(n+1) + 2n = nH -n^2 + n$, which verifies $T(1) = T(H) = H$. We just need to pay attention to the fact that we have started numbering at 1, which is not the convention.
+		Coming back to the 2D case, we have that the number of subwindows encompassing a pixel $(r+1,c+1)$ is $T(r,c) = (rH - r^2 + r) \times (cW - c^2 + c)$.
 		
 		\paragraph{}
-		Although the subwindows can have different sizes, the feature vector describing a particular subwindows cannot. More specifically, a column of the learning matrix must correspond to a well identified variable. Thus, we need to rescale all the subwindows to a common size. Ideally, the size should be chosen so as to minimize the reinterpolation error. The interpolation algorithms are nearest neighbor, bilinear and bicubic. We will focus on the nearest neighbor because it is the one that interfere less with the filtering.
-		%TODO interpolation : all the same number of features
+		Although the subwindows can have different sizes, the feature vector describing a particular subwindows cannot. More specifically, a column of the learning matrix must correspond to a well identified variable. Thus, we need to rescale all the subwindows to a common size. Ideally, the size should be chosen so as to minimize the reinterpolation error. The interpolation algorithms are nearest neighbor, bilinear and bicubic. We will focus on the nearest neighbor because it is faster and it was found to be comparable in term of classification accuracy to the others in most cases (\cite{}).
 		
 		\subsection{Feature descriptions}		
 		Starting from the original database of $M$ images, a set of $N$ filters and $P$ spatial poolings, we produced $N \times P$ images for each original ones. From each of those $M$ sets, we extracted $S$ subwindows on each of the $N \times P$ filter images. We now have $M \times S$ learning objects described by $N \times P$ complex structures. We will describe each structure by a feature vector and concatenate all the feature vectors corresponding to the same subwindow.
@@ -418,35 +415,116 @@ This chapter is divided into three sections. The first one aims at fully describ
 		Thus, there are $3(h \times w) \times (N \times P)$ features per subwindows. For instance, 100 filters with 1 pooling on 16x16 subwindows yields feature vector of $3(16 \times 16) \times 100 = 76,800$ variables.
 		
 		%\subsection{Compression layer}
+		
 		\subsection{Classification schemes}
 		The previous subsections cover the preprocessing steps to go from a database of images to an actual learning matrix. Now is time to delve into the actual classification mechanism. We will use two approaches described in the following. 
 		
 			\subsubsection{Direct classification}
-			In this variant, classification will be undertaken by a special kind of classification forest : ensemble of extremely randomized trees, also known as ExtraTrees. They were introduce in \ref{} and resemble random forest (\cite{randomforests}). In both kind of forests, only a subset of the features are examined at each node to determine the splitting criterion. They differ in the following way : while random forests use bagging as a extra mechanism to introduce randomness, the ExtraTrees determine the splitting thresholds randomly. Bagging, for bootstrap aggregating, is the fact of drawing with replacement several learning samples from the original one (boostrap) and combining their predictions (aggregating). 
-			The advantage of ExtraTrees over random forests in threefold. Firstly, the bagging introduces an effective reduction of the learning size of 36\% for each tree. This is not the case of the ExtraTrees, where all trees can learn from the whole learning sample. Secondly, they are much faster to build since we do not need to pick the optimal splitting thresholds of all the variables examined in a node. Lastly, they tend to perform better than their counterpart.%Need ref
+			In this variant, classification will be undertaken by a special kind of classification forest : ensemble of extremely randomized trees, also known as ExtraTrees. They were introduce in \cite{extratrees} and resemble random forest (\cite{randomforests}). In both kind of forests, only a subset of the features are examined at each node to determine the splitting criterion. This approach is called local random subspace and was introduced in \cite{randomsubspace}. They differ in the following way : while random forests use bagging as an extra mechanism to introduce randomness, the ExtraTrees determine the splitting thresholds randomly. Bagging, for bootstrap aggregating, is the fact of drawing with replacement several learning samples from the original one (boostrap) and combining their predictions (aggregating). 
+			The advantage of ExtraTrees over random forests is threefold. Firstly, the bagging introduces an effective reduction of the learning size of 36\% for each tree. This is not the case of the ExtraTrees, where all trees can learn from the whole learning sample. Secondly, they are much faster to build since we do not need to pick the optimal splitting thresholds of all the variables examined in a node. Lastly, they tend to perform better than their counterpart (\cite{extratrees}).
 			In this variant, also called ET-DIC (ExtraTrees for direct image classification), the classification is undertaken by the ExtraTrees directly.
-			Let us note that this scheme allows not only for feature importance evaluation but also for filter relevance evaluation by aggregating the importance of all the features corresponding to a given filter. %word about the (co-)usefulness ?
+			Let us note that this scheme allows not only for individual feature importance evaluation but also for filter relevance evaluation by aggregating the importance of all the features corresponding to a given filter. This metric is surely a good candidate for filter co-usefulness evaluation.
+			
 			%Recap hyper-parameters ?
 			
 			
 			
 			\subsubsection{Feature learning scheme}
-			Also called ET-FL (ExtraTrees for feature learning), this variant was introduce in \cite{ETFL}. The ExtraTrees are not used as classifier any longer. They form a preprocessing step whose output will constitute the learning matrix of the actual classifier. The idea is to use the trees to form visual dictionary. Specifically, ExtraTrees are used in an unsupervised way by selecting randomly the splitting criterion of each node, a variant called totally randomized trees. The dictionary words are composed of $T$ parts of different sizes, where $T$ is the number of trees. Each part encodes the index of the leave where a given object ends up in a one-hot fashion. Thus, the part corresponding to a tree with $L$ leaves will be a binary word with $L-1$ zeros and $1$ one. In the learning phase, the totatlly randomized trees are grown from the learning sample, then the same learning sample is propagated down the tree to form the new learning matrix, which is quite sparse. Since we are using several subwindows per original image, we can aggregate by summing bitwisely the words corresponding to the original image to form a new word : an histogram word.
-			The actual classification is then undertaken by a Support Machine Vector (SVM). %Describe SVM ?
-			Two remarks are in order. Firstly, we have lost the ability the evaluate the feature importances. Secondly, the learning size, and consequently the number of subwindows, is now crucially important. Indeed, of all the parameters, it is clearly this one that will influence the depth, and therefore, the number of leaves the most. 
+			Also called ET-FL (ExtraTrees for feature learning) or ERC-forests (Extremely randomized clustering forests), this variant was introduce in \cite{ETFL}. The ExtraTrees are not used as classifier any longer. They form a preprocessing step whose output will constitute the learning matrix of the actual classifier. The idea is to use the trees to form visual dictionary. Specifically, ExtraTrees are used in an unsupervised way by selecting randomly the splitting criterion of each node, a variant called totally randomized trees. The dictionary words are composed of $T$ parts of different sizes, where $T$ is the number of trees. Each part encodes the index of the leave where a given object ends up in a one-hot fashion. Thus, the part corresponding to a tree with $L$ leaves will be a binary word with $L-1$ zeros and $1$ one. In the learning phase, the totatlly randomized trees are grown from the learning sample, then the same learning sample is propagated down the tree to form the new learning matrix, which is quite sparse. Since we are using several subwindows per original image, we can aggregate by summing bitwisely the words corresponding to the original image to form a new word : an histogram word.
+		The actual classification is then undertaken by a Support Machine Vector (SVM). %Describe SVM ?
+		\paragraph{}
+		Two remarks are in order. Firstly, we have lost the ability the evaluate the feature importances. Secondly, the learning size, and consequently the number of subwindows, is now crucially important. Indeed, of all the parameters, it is one of the most influent parameters on the trees depth, and consequently the number of leaves. 
+		The second most important parameter is the pruning parameter. Pruning is the mechanism of stopping the tree creation before its completion. It can be applied either while developping the tree (pre-pruning) or artifically after the tree creation by cutting of some branches. It obviously also impact dearly the number of leaves. The main goal of pruning is to reduce the model complexity and consequently the overfitting. In the ET-DIC variant, pruning is not necessary because the voting takes care of reducing the overfitting. However, on the data fed to the SVM, there is no automatic overfitting control mechanism and the SVM will suffer from it. Therefore, pruning is also very important for this variant.
+		Last but obviously not least, the number of trees multiply the number of leaves. Therefore, this hyper-parameter is even more sensitive than in the ET-DIC approach.
+		\paragraph{}
+		An extensive comparison of both method was carried out in \cite{}. They show that, in most cases, the ET-FL approach performs slightly better (3-4\% in average). Nevertheless, ET-FL is more difficult to tune. 
 			%Recap hyper-parameters ?
 			
-	\section{Database and environment}
-	%CIFAR-10 : Several important results. 288 Go de ram dont 145 en shm. 30 core. frequency ?			
+	\section{Dataset and environment}
+	%CIFAR-10 : Several important results. 288 Go de ram dont 145 en shm. 30 core. frequency ?
+	We worked with the CIFAR-10 database (\cite{cifar}). This dataset is composed of a learning set of 50,000 images and a testing set of 10,000 images. They are grouped into 10 mutually exclusive classes : airplane, automobile, bird, cat, deer, dog, frog, horse, ship and trucks. Both subsets contain an equal number of images from each class. The images have all the same size, 32x32, and are RGB.
+	\par
+	This database has been chosen because it was the same one on which the precursory method from \cite{} was tested. In turn, they chose this dataset because their traditional solution had difficulties with it. Their best solution with the ET-DIC method was an accuracy rate of 53.67\%. The corresponding hyper-parameters were the following : 10 fully grown trees, 20 subwindows of 75-100\% of the original size reshaped by nearest neighbor interpolation to 16x16 image described by raw pixel values and inspecting all the features on each node. As for the ET-FL variant, the best result was 50.07\% of accuracy with 10 almost fully grown trees, 20 subwindows of 75-100\% of the original size reshaped in the same manner as before and using $k = \sqrt{M}$ of inspecting features at each node, where $M$ is the total number of features : 16x16x3. The trees are not totally grown : the minimum number of samples to split a node is fix to 10. Contrary to the majority of cases, the best ET-DIC is better than the best ET-FL.
+	Using the aforementioned precursory method, they were able to obtain a significant raise of accuracy, attaining a new record of 74.31\% with 750 trees totally randomized trees and 20 subwindows.
+	\par
+	The best result on this database is an accuracy of 91.2\% and is hold by a convolutional network (\cite{bestcifar}). The top ten best results are above 80\%. Most are neural network solutions and none are based on classification forests.
+	\paragraph{}
+	The learning and testing were carried out on a 64 bits 30-core 2.1 GHz computer with 288 GB of RAM. %TODO elaborate
+	
+	
 	\section{Implementation}
+	%Somewhere : Scikit-learn for extra-trees + liblinear via scikitlearn
 		\subsection{Software architecture}
 		\subsection{Technical issues}
+		Although the method takes much more time than the more traditional approach, the main limitation we will face is memory. The ExtraTrees implementation require 32-bits floats and the SVM 64-bits floats. However, in the case of the ET-FL, the matrix is mostly sparse on therefore the 64-bits floats require by the SVM is not an issue. Thus, the space cost bottleneck is the input of the ExtraTrees, which require to hold all the data in memory. Considering 100 filters, 1 spatial pooling, subwindows resized in 16x16, 3 colors, 10 subwindows and the whole learning set (50,000 images) the RandConv method will produce 153.6 GB of data. For 39 filters (the custom filters plus the original image) and 20 subwindows with 9 spatial poolings (the configuration of the best results of \cite{}), 1,1 Tb would be required. Since we are limited to 288 GB, we will not be able to reproduce such a configuration.
+		\par
+		One way of sidestepping this limitation is to build several forests with a different subset of the features, a variant which might be call global random subset (GRS) of features. 
+		In the case of the RandConv this can be done by choosing a subset of filters for each forest.
+		
+	\section{Hyper-parameters summary}
+	Before elaborating on the results, we will rapidly summarize all the hyper-parameters involved with the RandConv framework.
+	
+	\begin{itemize}
+	
+		\item Filter generation
+		\begin{itemize}
+			\item Size range
+			\item Value range
+			\item Filter generator
+			\item Random law
+			\item Other filter generator specific parameters (maximum distance, number of subdivisions,...)
+			\item Filter normalization
+			\item whether or not to include the original image
+		\end{itemize}
+		
+		\item Spatial poolings
+		\begin{itemize}
+			\item Number and type of poolings
+			\begin{itemize}
+				\item Aggregation or moving window
+				\item Pooling function : identity, minimum, average or maximum
+			\end{itemize}
+			\item Size of the neighborhood
+		\end{itemize}
+		
+		\item Subwindow extraction
+		\begin{itemize}
+			\item Number of subwindows
+			\item Subwindows cropping size
+			\item Subwindows rescaling size
+			\item Subwindows rescaling interpolation
+		\end{itemize}
+		
+		\item ExtraTrees
+		\begin{itemize}
+			\item Number of trees (default : 30)
+			\item Number of features of the local random subspace : $k$ (default : square root of the total number of features)
+			\item Maximum depth (default : no maximum depth)
+			\item Minimum sample to split : $n_{min)$ (default : 2)
+			\item Minimum sample per leaf (default: 1)
+			\item Whether or not to use bootstrap (default : no bootstrap)
+		\end{itemize}
+	\end{itemize}
+	
+	As we can see, the number of hyper-parameters is already large. We can divide them in two categories. On the one hand, we have structural parameters and on the other, traditional hyper-parameters. Structural parameters have a more profound impact than traditional ones. The filter generator and its random law and the number and type of spatial poolings form the structural parameters. Conceptually at least, changing one of them is closer to changing the classification method than only one of its hyper-parameters.
+	\paragraph{}
+	Three of the ExtraTrees hyper-parameters are used to control the pruning : the maximum depth, the minimum sample split and the minimum sample per leaf. The difference between the last two is that the first one does not attempt to split a node whose number of samples are under the given threshold, while the second does the split but rollback if any of the children are under the threshold. 
+	\paragraph{}
+	Several of the parameters can be fixed. The value range of the filters will be set as in the filter generator descriptions. Considering the size of the images, we will mostly focus on 3x3 to 9x9 filters. Since we are working with trees, we will use no normalization of the filters. Concerning the spatial poolings, we will also restrict ourselves to small neighborhoods. For comparative purposes, we will resize subwindows to have sizes of 16x16 with nearest neighbor interpolation, as in \cite{}. Moreover, we will extract subwindows of 24x24 to 32x32 pixels. For the ET-DIC variant, we will use the default trees parameters, which means no pruning. We will also use 30 trees (one per core). However, in the ET-FL approach, we will have to prune the trees and use more of them. The $n_{min}$ parameter will be set to 500 with 750 trees. Table \ref{tab:DefaultValuesForHyperParameters} displays the fix or default values of the hyper-parameters. Unless stated otherwise, these values are to be assumed in the next chapter.
+	
+	\begin{table}
+		\centering
+			\begin{tabular}
+				
+			\end{tabular}
+		\caption{Default values for hyper-parameters}
+		\label{tab:DefaultValuesForHyperParameters}
+	\end{table}
 		
 %TODO : feature evaluation --> by filter
 
 		
 \chapter{Result analysis}
-\paragraph{}
 In this chapter, we describe the experiments conducted with our new classification method and analyze their results. The chapter is divided into two sections. The first one tackles the direct classification scheme, where the forest of extremely randomized trees serves as classificator. The second section describes the other variant where the extremely randomized trees are used to create a visual dictionary, while the actual classification is undergone by a support vector machine.
 	\section{Direct classification scheme}
 	\section{Feature learning scheme}
