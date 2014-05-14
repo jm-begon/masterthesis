@@ -187,31 +187,6 @@ class Coordinator(Progressable):
         return self._logger
 
 
-class LoadCoordinator(Coordinator):
-    """
-    ===============
-    LoadCoordinator
-    ===============
-    Pseudo :class:`Coordinator` which load a given file instead of processing
-    the :class:`ImageBuffer` instance.
-    """
-
-    def __init__(self, filename, logger=None, verbosity=None):
-        """
-        Construct a :class:`LoadCoordinator`
-
-        Parameters
-        ----------
-        filename : file or str
-            The path to the numpy file holding the 2D feature array
-        """
-        Coordinator.__init__(self, logger, verbosity)
-        self._file = filename
-
-        def process(self, imageBuffer=None, learningPhase=True):
-            return np.load(self._file)
-
-
 class PixitCoordinator(Coordinator):
     """
     ================
@@ -486,6 +461,38 @@ class RandConvCoordinator(Coordinator):
 
     def nbObjects(self, imageBuffer):
         return len(imageBuffer)*self.nbObjMultiplicator()
+
+
+class LoadCoordinator(RandConvCoordinator):
+    """
+    ===============
+    LoadCoordinator
+    ===============
+    Pseudo :class:`Coordinator` which load a given file instead of processing
+    the :class:`ImageBuffer` instance.
+    """
+
+    def __init__(self, rcCoordinator, learningFile, testingFile):
+        """
+        Construct a :class:`LoadCoordinator`
+
+        Parameters
+        ----------
+        filename : file or str
+            The path to the numpy file holding the 2D feature array
+        """
+        RandConvCoordinator.__init__(self, rcCoordinator._convolExtractor,
+                                     rcCoordinator._featureExtractor,
+                                     rcCoordinator._logger,
+                                     rcCoordinator._verbosity)
+        self._learningFile = learningFile
+        self._testingFile = testingFile
+        self._exec= rcCoordinator._exec
+
+        def process(self, imageBuffer=None, learningPhase=True):
+            if learningPhase:
+                return np.load(self._learningFile)
+            return np.load(self._testingFile)
 
 
 class CompressRandConvCoordinator(RandConvCoordinator):
