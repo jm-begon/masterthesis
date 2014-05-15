@@ -81,6 +81,9 @@
 %change item style
 %\bullet (default), \circ  \triangleright, \divideontimes, \circledcirc  \bigstar \models \vdash \vDash \Vdash \circlearrowleft \circlearrowright \looparrowright (nice) \Psi \crux \heartsuit \clubsuit \spadesuit \surd \diamondsuit \blacktriangle \blacksquare \blacklozenge \blacktriangledown \sphericalangle \propto \maltese (nice) \checkmark
 \def\labelitemi{$\looparrowright$} 
+\def\labelitemii{$\propto$} 
+%\def\labelitemiii{$\looparrowright$} 
+%\def\labelitemiv{$\looparrowright$} 
 
 
 %Page de garde
@@ -175,8 +178,9 @@
 \pagestyle{fancy}
 \lhead{}
 \chead{}
-\rhead{\itshape \textcolor{gris}{Generic image classification}}
-\lfoot{\itshape \textcolor{gris}{The RandConv framework}}
+%\lhead{\itshape \textcolor{gris}{\leftmark}} % display chapter name
+\rhead{\itshape \textcolor{gris}{\rightmark}} % display section name
+\lfoot{\itshape \textcolor{gris}{Generic image classification - The RandConv framework}}
 \cfoot{}
 \rfoot{\itshape \textcolor{gris}{\thepage}}
 \renewcommand{\headrulewidth}{0.4pt}
@@ -382,7 +386,7 @@ This chapter is divided into three sections. The first one aims at fully describ
 		Once the generated filters and the spatial poolings have been applied, it is time to extract subwindows from the images. Extracting subwindows has several advantages. 
 		Firstly, it expands the number of learning objects. Depending on the feature descriptor extraction mechanism, there may be numerous features describing a given image. Using less features but more objects performs usually better. As we mentioned earlier, this is especially true with trees, at least for the ``more objects'' part, where a greater database means a greater tree and therefore a more complex model.
 		Secondly, this approach is more robust towards ...%TODO obstruction and stuff
-		Lastly, it can be used as a zone of interest detection system, see for example \cite{maree2006biological}. This is an computationally interesting and domainfree alternative to other techniques. Although this is not the focus of the present work, the RandConv method retains this capability as well.
+		Lastly, it can be used as a zone of interest detection system, see for example \cite{mareebiological}. This is an computationally interesting and domainfree alternative to other techniques. Although this is not the focus of the present work, the RandConv method retains this capability as well.
 		While expanding the number of learning objects, we also need to to expand the class label accordingly. Consequently, each subwindows will be described by the label of its original image.
 		
 		\paragraph{}
@@ -454,12 +458,83 @@ This chapter is divided into three sections. The first one aims at fully describ
 	
 	\section{Implementation}
 	%Somewhere : Scikit-learn for extra-trees + liblinear via scikitlearn
+	In this section, we dive into implementation details and issues. We will not go over all the elements in detail again but rather see how the discussions of the previous sections translate into code. In a second subsection we will also develop technical limitations.
 		\subsection{Software architecture}
-		\subsection{Technical issues}
-		Although the method takes much more time than the more traditional approach, the main limitation we will face is memory. The ExtraTrees implementation require 32-bits floats and the SVM 64-bits floats. However, in the case of the ET-FL, the matrix is mostly sparse on therefore the 64-bits floats require by the SVM is not an issue. Thus, the space cost bottleneck is the input of the ExtraTrees, which require to hold all the data in memory. Considering 100 filters, 1 spatial pooling, subwindows resized in 16x16, 3 colors, 10 subwindows and the whole learning set (50,000 images) the RandConv method will produce 153.6 GB of data. For 39 filters (the custom filters plus the original image) and 20 subwindows with 9 spatial poolings (the configuration of the best results of \cite{}), 1,1 Tb would be required. Since we are limited to 288 GB, we will not be able to reproduce such a configuration.
+		A major concern of the design was to allow as much room as possible for flexibility, so as to be able to develop extensions and variants of the method rapidly. Consequently, the code was split into many classes. A drawback of this is that assembling all the pieces together might be difficult. Factory methods are provided to help with this issue but care must be taken to build up a coherent classifier. We will go back on this in a short while. 
+		Not all the code is brand new, however. The ExtraTrees implementation comes from the scikit-learn library (\cite{sklearn}), version 0.15. We also use scikit-learn for SVM classification, although it actually consists of a wrapper to the liblinear library (\cite{}). As for the subwindow extraction, it is a reorganization of the Pixit implementation (\cite{}).
+		We will examine the code in a top-down manner and focus on the important classes.
+		\paragraph{}
+		At the top, we find the \texttt{Classifier} class. Its aim is to supervise all the parts. The base class correspond to the ET-DIC variant. The \texttt{RandConvCoordinator} is responsible for all the preprocessing : filtering, pooling, subwindow extraction, feature description. After this step, the \texttt{Classifier} instance delegates the actual classification to a \texttt{BaseEstimator} instance from scikit-learn. In this case, the actual classifier is supposed to be an instance of \texttt{ExtraTreesClassifier}. The \texttt{UnsupervisedVisualBagClassifier} corresponds to ET-FL method. Between the preprocessing and the classification, we use the \texttt{RandomTreesEmbedding}, a totally randomized trees implementation, to build the histogram we will fed to the \texttt{BaseEstimator}, supposed to be a \texttt{LinearSVC} instance.
+		This is summarized by figure \ref{fig:uml-classifier}.
+		
+		
+		\begin{figure}
+			\centering
+				\includegraphics[width=1.00\textwidth]{images/uml-classifier.png}
+			\caption{UML representation of the \texttt{Classifier} class and its major components}
+			\label{fig:uml-classifier}
+		\end{figure}
+		
+		
+		\paragraph{}
+		We now go back to the \texttt{RandConvCoordinator}. Its responsibility is to transform the subwindows into feature vectors. It proceeds by subdividing the dataset to parallelize the transformation. Then, the \texttt{ConvolutionalExtractor} process each image. This entails filtering the image by each element of the \texttt{FiniteFilter} thanks to the \texttt{Convolver}, the applying all the spatial poolings contained in the \texttt{MultiPooler} and finally extracting several subwindows via the \texttt{MultiSWExtractor}. Once all this is done, each filtered and pooled subwindow is passed through the \texttt{Extractor} and reassembled to form a coherent learning submatrix.
 		\par
-		One way of sidestepping this limitation is to build several forests with a different subset of the features, a variant which might be call global random subset (GRS) of features. 
-		In the case of the RandConv this can be done by choosing a subset of filters for each forest.
+		The \texttt{FiniteFilter} objects are containers for filters. They pre-generate a finite number of filters thanks to the \texttt{FilterGenerator}. We will come back to those in the next paragraph. If we are working with RGB images, we need to use either a \texttt{Finite3Filter} or a \texttt{Finite3SameFilter}. The former produces a different filter per color component while the latter uses the same filter on each color. Also, we need to use an appropriate \texttt{Convolver}, namely the \texttt{RGBConvolver}.
+		\par
+		The subwindow extraction is carried out by the \texttt{MultiSWExtractor} whose sole purpose is to keep track of the subwindows to extract to the set of filtered and pooled images belonging to the same original image. The actual subwindow generation and extraction are delegated to the \texttt{SubWindowExtractor}.
+		\par
+		The transformation from subwindows to feature vector is the responsibility of the \texttt{Extractor} instance. In this case, a \texttt{ImageLinearizationExtractor} object. However, other mechanism could be implemented.
+		All this is summarized by the figure \ref{fig:uml-ConvolutionalExtractor}.
+		
+		
+		\begin{figure}
+			\centering
+				\includegraphics[width=1.00\textwidth]{images/uml-RandConvCoord.png}
+			\caption{UML representation of the \texttt{RandConvCoordinator} and its major components}
+			\label{fig:uml-ConvolutionalExtractor}
+		\end{figure}
+		
+
+		
+		
+		\paragraph{}
+		We now explore the \texttt{FilterGenerator}. They need two random number generators. One for drawing the values, either directly or not, and one for drawing the size. The base class is used for two of the generation methods : the discrete law generator and the zero-perturbation generator. The former is made by using a \texttt{CustomDiscreteNumberGenerator} while the later uses the base class of \texttt{NumberGenerator}. 
+		As figure \ref{fig:uml-filtergen} displays, there is a class dedicated to each of the other generators.
+		\par
+		The \texttt{GaussianNumberGenerator} works by specifying a lower bound, an upper bound and the probability of being outside of that range. The \texttt{ClippedGaussianRNG} works similarly but in addition forces the values outside of the range to the appropriate bound.
+		
+		
+		\begin{figure}
+			\centering
+				\includegraphics[width=1.00\textwidth]{images/uml-filtergen.png}
+			\caption{UML representation of the \texttt{FilterGenerator}s and \texttt{NumberGenerator}s}
+			\label{fig:uml-filtergen}
+		\end{figure}
+		
+		
+		\paragraph{}
+		The \texttt{MultiPooler} class involved in the \texttt{RandConvCoordination} is a container of spatial poolings. As the figure \ref{fig:uml-pooling} depicts, our two groups of spatial poolings are presents.
+		
+		
+		\begin{figure}
+			\centering
+				\includegraphics[width=1.00\textwidth]{images/uml-pooling.png}
+			\caption{UML representaiton of the spatial poolings}
+			\label{fig:uml-pooling}
+		\end{figure}
+		
+		
+		
+		
+		
+		\subsection{Technical issues}
+		The main limitation we will face is memory. The ExtraTrees implementation require 32-bits floats and the SVM, 64-bits floats. However, in the case of the ET-FL, the matrix is mostly sparse on therefore the 64-bits floats requirement of the SVM will not be troublesome. Thus, the space cost bottleneck is the input of the ExtraTrees, which require to hold all the data in memory. Considering 100 filters, 1 spatial pooling, subwindows resized in 16x16, 3 colors, 10 subwindows and the whole learning set (50,000 images) the RandConv method will produce 153.6 GB of data. For 39 filters (the custom filters plus the original image) and 20 subwindows with 9 spatial poolings (the configuration of the best results of \cite{}), 1,1 Tb would be required. Since we are limited to 288 GB, we will not be able to reproduce such a configuration.
+		\par
+		One way of sidestepping this limitation is to build several forests with a different subset of the features, a variant which might be called ``global random subset'' (GRS) of features. 
+		In the case of the RandConv this can easily be done by choosing a subset of filters for each forest.
+		
+		\paragraph{}
+		To a lesser extend, the time complexity will be an hindrance. It will not actually prevent any computation but we will have to plan carefully the experiment to carry out. For instance, our first example, which produces 153.6 GB of data, takes between 5h and 12h depending on the machine load.
 		
 	\section{Hyper-parameters summary}
 	Before elaborating on the results, we will rapidly summarize all the hyper-parameters involved with the RandConv framework.
@@ -500,7 +575,7 @@ This chapter is divided into three sections. The first one aims at fully describ
 			\item Number of trees (default : 30)
 			\item Number of features of the local random subspace : $k$ (default : square root of the total number of features)
 			\item Maximum depth (default : no maximum depth)
-			\item Minimum sample to split : $n_{min)$ (default : 2)
+			\item Minimum sample to split : $n_{min}$ (default : 2)
 			\item Minimum sample per leaf (default: 1)
 			\item Whether or not to use bootstrap (default : no bootstrap)
 		\end{itemize}
@@ -514,8 +589,9 @@ This chapter is divided into three sections. The first one aims at fully describ
 	
 	\begin{table}
 		\centering
-			\begin{tabular}
-				
+			\begin{tabular}{l|r}
+			test11 & test12 \\
+			test21 & 22
 			\end{tabular}
 		\caption{Default values for hyper-parameters}
 		\label{tab:DefaultValuesForHyperParameters}
