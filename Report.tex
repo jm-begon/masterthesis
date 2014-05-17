@@ -194,6 +194,49 @@
 \chapter{Introduction}
 
 \chapter{State of the art}
+The early days of computer vision have seen the development of myriads of domain specific methods, notably in the field of image classification. Image classification is the process of assigning the correct label from a predfinied set to an image. The main drawback of the domain specificity is that solutions are not necessarily transposable to other domains. The supervised machine learning framework sidestep this limitation by making no assumptions about the particular domain of application. Rather, it proposes a representation general enough for most problem to fit in, albeit with some preprocessing. Overcoming the domain specificity is achieved by letting the computer \textit{learn} the discrimination scheme instead of supplying it.
+\par
+This chapter is divided in two sections. In the first one, we review the supervised learning framework in general. In the second part, we focus on supervised learning image classification.
+
+
+\section{Supervised learning.}
+At the framework core are objects, also called individuals. The objects differ from each other by their features, also called variables. Among them is one which holds a special status : the output variable. The ultimate goal of a supervised learning algorithm is to produce a model mapping a previously unseen object's regular features to the output variable. Thus, the learning algorithm needs a space of candidate models. In order to provide the most adequate model out of the candidates, the algorithm needs two additional elements : a quality measure and an optimization strategy. It is sometimes more convenient to use the inverse of the quality measure : the loss function. We talk about \textit{learning} because the algorithm optimizes the quality measure using a set of objects, called the learning set. 
+\par
+More formally, the learning set $LS = \{ (\boldsymbol{x}_i, y_i) | i = 1,..., N\}$ is composed of $N$ objects. Each object $i$ is described by a tuple of features : $\boldsymbol{x}_i \in \mathcal{X}$ are the regular features and $y_i \in \mathcal{Y}$ is the output variable. We represent the learning algorithm hypothesis space by $\mathcal{H}$ and its quality measure by $\ell : \mathcal{Y} \times \mathcal{Y} \rightarrow \mathbb{R}$. The learning algorithm maps the learning set to a function $f \in \mathcal{H} : \mathcal{X} \rightarrow \mathcal{Y}$ so as to try to minimize some expectation over the loss function. Depending on the structure of $\mathcal{Y}$, the model either performs a regression or a classification.
+\par
+The most usual quality measures are the square error $\ell(y, \hat{y}) = (y - \hat{y})^2$ for regression problems and the classification error
+\[
+\boldsymbol{1}_{\neq}(y,\hat{{y}})=\begin{cases}
+\begin{array}{c}
+1\text{ if }y \neq \hat{y}\\
+0\text{ otherwise}
+\end{array}\end{cases}
+\]
+for classification problems. Based on those loss functions, we can define the expected error by $E_{\boldsymbol{x},y} \{\ell(f(\boldsymbol{x}), y)\}$. If we dispose of a testing set $TS = \{ (\boldsymbol{x}_i, y_i) | i = 1,..., M\}$ with a sufficiently large $M$, we can assess the expected error by $\frac{1}{M}\sum_{\boldsymbol{x}, y \in TS} \ell(f(\boldsymbol{x}), y)$. If $TS = LS$, we call this the resubstitution error. However, we are generally interested in the case where both sets are different while coming from the same distribution. We then talk about generalization error. This is the error we are trying to minimize.
+
+\paragraph{The example of decision trees.}
+Decision tree (\cite{decisiontrees}) is a good example of classification algorithm. More accurately, the decision tree is the model produced and the learning algorithm is the growing algorithm. The decision tree is a binary tree where each interior node represent a dichotomic choice regarding one regular feature and each leaf is labeled by a class. Classifying an object consist of moving from one node to another according to the node's test. Once the image reaches a leaf, its class is associated to the image.
+\par
+Growing a good tree, in the sense of the quality measure, is done in a top-down fashion by a greedy heuristic. We first need to define an impurity measure which indicates how much diversity for the variable $y$ there is in a sample. We start at the root and pick up the dichotomic choice, also called splitting criterion, which accomplishes the maximum expected reduction of impurity. Then the learning sample is split into a left and a right branch according to the test result. We can now develop both nodes recursively up till there is only objects of the same class in a node, making it a leaf. With this mechanism, the resubstition error is null, thus proving that the method minimizes the loss function. However, the generalization can be quite large. That is why other mechanism, such as other stopping criteria, are implemented.
+\par
+A widely-used impurity measure is Shannon entropy. In that case, the construction algorithm has a nice interpretation. The reduction of impurity is the information gain. At each node, we choose the test which brings the most information to the classification variable.
+
+
+\paragraph{}
+The learning algorithm dependence on the learning set is clearer in the regression case, where we have the following bias-variance decomposition : 
+\begin{align*}
+	E_{LS} \{ E_{\boldsymbol{x},y} \{ (y - f(\boldsymbol{x})^2)\} \} = &\phantom{+} E_{\boldsymbol{x},y} \{ (y - E_{y|\boldsymbol{x}}\{ y\})^2 \}  \\
+	                                                                   &+ E_{\boldsymbol{x}} \{ (E_{y|\boldsymbol{x}}\{ y\} - E_{LS}\{f(\boldsymbol{x})\})^2 \}  \\
+																																	   &+ E_{\boldsymbol{x}} \{ (f(\boldsymbol{x}) -  E_{LS}\{f(\boldsymbol{x})\})^2 \}
+\end{align*}
+The first term, characterize the intrinsic difficulty of the regression task. It quantifies the average deviation of the best possible model $E_{y|\boldsymbol{x}}$, the Bayes model, from the ground truth.
+The second term is the expected square bias. It quantifies the average error between the Bayes model and the average model, $E_{LS}\{f(\boldsymbol{x})\}$. 
+The third term is the average variance of the model. It quantifies how much the model varies from one learning set to another. 
+Although there is no such analytical decomposition for classification, the concepts of Bayes model, bias and model variance still abide as conceptual tools.
+\paragraph{}
+The space of candidate model $\mathcal{H}$ is composed of elements of varying complexity. For instance, a decision tree complexity is assessed by its number of nodes. A more complex model will fit the learning set better, thus reducing the resubstitution error. However, fitting this set too well will cause overfitting : the algorithm incorporate set-specific details. This is reflected by the model variance term of the learning algorithm error : slight changes in the learning set will produce very different models. The bias decrease will, at first, surcompensate that increase, yielding a better generalization error. The compensation will work up to the point where the average is of the same order of complexity as the Bayes model. From that point on, the bias decrease will slow down while the model variability still increases. Therefore, the generalization error starts to increase, as well.
+The ability to control the complexity is an important characteristic of a learning algorithm. Another way around this problem is to resort to ensemble methods. Among such methods are the averaging methods which combine several models by averaging their predictions. The models are usually drawn from the same candidate space by either using different learning set or introducing some randomization in the learning algorithm, sometimes both. Ensemble methods rely on the averaging to reduce variability and thus can enjoy more complex models. Ensemble of decision trees form classification forests.
+
 
 \chapter{Objectives}
 The hypothesis at the core of the present master thesis can be stated as follows : 
@@ -458,10 +501,10 @@ This chapter is divided into three sections. The first one aims at fully describ
 	
 	\section{Implementation}
 	%Somewhere : Scikit-learn for extra-trees + liblinear via scikitlearn
-	In this section, we dive into implementation details and issues. We will not go over all the elements in detail again but rather see how the discussions of the previous sections translate into code. In a second subsection we will also develop technical limitations.
+	In this section, we dive into implementation. We will not go over all the elements in detail again but rather see how the discussions of the previous sections translate into code. In a second subsection we will also develop technical limitations.
 		\subsection{Software architecture}
 		A major concern of the design was to allow as much room as possible for flexibility, so as to be able to develop extensions and variants of the method rapidly. Consequently, the code was split into many classes. A drawback of this is that assembling all the pieces together might be difficult. Factory methods are provided to help with this issue but care must be taken to build up a coherent classifier. We will go back on this in a short while. 
-		Not all the code is brand new, however. The ExtraTrees implementation comes from the scikit-learn library (\cite{sklearn}), version 0.15. We also use scikit-learn for SVM classification, although it actually consists of a wrapper to the liblinear library (\cite{}). As for the subwindow extraction, it is a reorganization of the Pixit implementation (\cite{}).
+		The code is written in Python 2.7 and relies and the 0.13.3 version of Scipy (\cite{scipy}), including Numpy 1.8.0. Not all the code is brand new. The ExtraTrees implementation comes from the scikit-learn library (\cite{sklearn}), version 0.15. We also use scikit-learn for SVM classification, although it actually consists of a wrapper to the liblinear library (\cite{}). As for the subwindow extraction, it is a reorganization of the Pixit implementation (\cite{}).
 		We will examine the code in a top-down manner and focus on the important classes.
 		\paragraph{}
 		At the top, we find the \texttt{Classifier} class. Its aim is to supervise all the parts. The base class correspond to the ET-DIC variant. The \texttt{RandConvCoordinator} is responsible for all the preprocessing : filtering, pooling, subwindow extraction, feature description. After this step, the \texttt{Classifier} instance delegates the actual classification to a \texttt{BaseEstimator} instance from scikit-learn. In this case, the actual classifier is supposed to be an instance of \texttt{ExtraTreesClassifier}. The \texttt{UnsupervisedVisualBagClassifier} corresponds to ET-FL method. Between the preprocessing and the classification, we use the \texttt{RandomTreesEmbedding}, a totally randomized trees implementation, to build the histogram we will fed to the \texttt{BaseEstimator}, supposed to be a \texttt{LinearSVC} instance.
@@ -544,6 +587,7 @@ This chapter is divided into three sections. The first one aims at fully describ
 		\item Filter generation
 		\begin{itemize}
 			\item Size range
+			\item Whether or not to produce squared filters
 			\item Value range
 			\item Filter generator
 			\item Random law
@@ -572,7 +616,7 @@ This chapter is divided into three sections. The first one aims at fully describ
 		
 		\item ExtraTrees
 		\begin{itemize}
-			\item Number of trees (default : 30)
+			\item Number of trees (default : 10)
 			\item Number of features of the local random subspace : $k$ (default : square root of the total number of features)
 			\item Maximum depth (default : no maximum depth)
 			\item Minimum sample to split : $n_{min}$ (default : 2)
@@ -589,9 +633,31 @@ This chapter is divided into three sections. The first one aims at fully describ
 	
 	\begin{table}
 		\centering
-			\begin{tabular}{l|r}
-			test11 & test12 \\
-			test21 & 22
+			\begin{tabular}{l|l}
+			\hline
+			Hyper-parameter & default value \\
+			\hline
+			Filter sizes & 3 to 9, both included\\
+			Square sizes & True \\
+			Filter value range & [-1, 1] \\
+			Filter generator & \texttt{FilterGenerator} (Zero-perturbed generator)\\
+			Random law & Real uniform\\
+			Filter normalization & None\\
+			Include original image & True\\
+			Number of spatial poolings & 1 \\
+			Type of spatial poolings & Average moving window \\
+			Size of the neigborhood & 3x3 \\
+			Number of subwindows & 10 \\
+			Cropping size & 24x24 to 32x32 \\
+			Rescaling size & 16x16 \\
+			Interpolation & Nearest neighbor \\
+			Number of trees & 30 (ET-DIC), 750 (ET-FL) \\
+			$k$ & Square root of the total number of features \\
+			Maximum depth & None \\
+			Minimum sample to split & 2 (ET-DIC), 500 (ET-FL) \\
+			Minimum sample per leaf & 1 \\
+			Bootstrap & False \\
+			\hline
 			\end{tabular}
 		\caption{Default values for hyper-parameters}
 		\label{tab:DefaultValuesForHyperParameters}
