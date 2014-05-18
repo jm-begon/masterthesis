@@ -13,7 +13,7 @@ from Pooler import Pooler
 __all__ = ["FastMWAvgPooler", "FastMWMaxPooler", "FastMWMinPooler"]
 
 class FastMWPooler(Pooler):
-	def __init__(self, fastFunction, height, width):
+    def __init__(self, fastFunction, height, width):
         """
         Construc a class:`Pooler` instance
 
@@ -24,20 +24,20 @@ class FastMWPooler(Pooler):
         width : int > 0 odd number
             the window width
         """
-		self._function = fastFunction
+        self._function = fastFunction
         self._windowHalfHeight = height//2
         self._windowHalfWidth = width//2
-		
-	def pool(self, npArray):
+
+    def pool(self, npArray):
 		if npArray.ndim == 2:
 			return self._function(npArray, self._windowHalfHeight, self._windowHalfWidth)
 		ls = []
-		cdef unsigned int i
+          cdef unsigned int i
 		for i in xrange(npArray.shape[2]):
 			ls.append(self._function(npArray[:,:,i], self._windowHalfHeight, self._windowHalfWidth))
 		return np.dstack(ls)
-		
-		
+
+
 class FastMWAvgPooler(FastMWPooler):
 
     def __init__(self, height, width):
@@ -95,8 +95,7 @@ def avgPooling(np.ndarray[np.float64_t, ndim=2] img,
 
     cdef unsigned int height, width, subrow, subcol, counter
     cdef int   row, col, u, d, l, r, rMin, rMax, cMin, cMax
-#    cdef double acc
-	np.float64_t acc
+    cdef double acc
     height = img.shape[0]
     width = img.shape[1]
 
@@ -143,8 +142,7 @@ def maxPooling(np.ndarray[np.float64_t, ndim=2] img,
 
     cdef unsigned int height, width, subrow, subcol
     cdef int   row, col, u, d, l, r, rMin, rMax, cMin, cMax
-#    cdef double maxVal
-	np.float64_t maxVal
+    cdef double maxVal
     height = img.shape[0]
     width = img.shape[1]
 
@@ -191,8 +189,7 @@ def minPooling(np.ndarray[np.float64_t, ndim=2] img,
 
     cdef unsigned int height, width, subrow, subcol
     cdef int   row, col, u, d, l, r, rMin, rMax, cMin, cMax
-#    cdef double minVal
-	np.float64_t minVal
+    cdef double minVal
     height = img.shape[0]
     width = img.shape[1]
 
