@@ -66,7 +66,7 @@ class FastMWMaxPooler(FastMWPooler):
         width : int > 0 odd number
             the window width
         """
-		FastMWPooler.__init__(maxPooling, height, width)
+        FastMWPooler.__init__(maxPooling, height, width)
 
 
 class FastMWMinPooler(FastMWPooler):
