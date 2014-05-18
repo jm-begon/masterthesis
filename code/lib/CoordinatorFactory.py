@@ -20,6 +20,7 @@ from FeatureExtractor import ImageLinearizationExtractor
 from Pooler import (IdentityPooler, MultiPooler, ConvMinPooler,
                     ConvAvgPooler, ConvMaxPooler, MorphOpeningPooler,
                     MorphClosingPooler)
+from FastPooling import FastMWAvgPooler, FastMWMinPooler, FastMWMaxPooler
 from Aggregator import AverageAggregator, MaximumAggregator, MinimumAggregator
 from ConvolutionalExtractor import ConvolutionalExtractor
 from Coordinator import (RandConvCoordinator, PixitCoordinator,
@@ -172,11 +173,11 @@ def getMultiPoolers(poolings, finalHeight, finalWidth):
                                              finalWidth,
                                              finalHeight))
         elif policy is Const.POOLING_CONV_MIN:
-            poolers.append(ConvMinPooler(height, width))
+            poolers.append(FastMWMinPooler(height, width))
         elif policy is Const.POOLING_CONV_AVG:
-            poolers.append(ConvAvgPooler(height, width))
+            poolers.append(FastMWAvgPooler(height, width))
         elif policy is Const.POOLING_CONV_MAX:
-            poolers.append(ConvMaxPooler(height, width))
+            poolers.append(FastMWMaxPooler(height, width))
         elif policy is Const.POOLING_MORPH_OPENING:
             poolers.append(MorphOpeningPooler(height, width))
         elif policy is Const.POOLING_MORPH_CLOSING:

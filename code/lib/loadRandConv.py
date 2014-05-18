@@ -46,9 +46,9 @@ filterPolicy = (Const.FGEN_ZEROPERT, {"minSize":2, "maxSize":10, "minVal":-1, "m
 #Aggregation
 poolings = [
 #        (2, 2, Const.POOLING_AGGREG_AVG),
-        (3, 3, Const.POOLING_MW_AVG),
-#        (3, 3, Const.POOLING_MW_MIN),
-#        (3, 3, Const.POOLING_MW_MAX)
+        (3, 3, Const.POOLING_POOL_AVG),
+#        (3, 3, Const.POOLING_POOL_MIN),
+#        (3, 3, Const.POOLING_POOL_MAX)
         ]
 
 #Subwindow
@@ -180,9 +180,7 @@ def run(nb_filters=nb_filters,
     #--Learning--#
     print "Starting learning"
     fitStart = time()
-    X_learn = np.load(learnFile)
     classifier.fit(learningSet)
-
     fitEnd = time()
     print "Learning done", formatDuration(fitEnd-fitStart)
     sys.stdout.flush()

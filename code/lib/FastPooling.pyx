@@ -14,14 +14,12 @@ __all__ = ["FastMWAvgPooler", "FastMWMaxPooler", "FastMWMinPooler"]
 
 class FastMWAvgPooler(Pooler):
 
-    def __init__(self, function, height, width):
+    def __init__(self, height, width):
         """
-        Construc a class:`ConvolutionalPooler` instance
+        Construc a class:`Pooler` instance
 
         Parameters
         ----------
-        function : callable
-            A function as mentionned in the class description
         height : int > 0 odd number
             the window height
         width : int > 0 odd number
@@ -32,18 +30,16 @@ class FastMWAvgPooler(Pooler):
         self._windowHalfWidth = width//2
 
     def pool(self, npArray):
-        return avgPooling(npArray, self._windowHalfHeight, _windowHalfWidth)
+        return avgPooling(npArray, self._windowHalfHeight, self._windowHalfWidth)
 
 class FastMWMaxPooler(Pooler):
 
-    def __init__(self, function, height, width):
+    def __init__(self, height, width):
         """
-        Construc a class:`ConvolutionalPooler` instance
+        Construc a class:`Pooler` instance
 
         Parameters
         ----------
-        function : callable
-            A function as mentionned in the class description
         height : int > 0 odd number
             the window height
         width : int > 0 odd number
@@ -54,18 +50,16 @@ class FastMWMaxPooler(Pooler):
         self._windowHalfWidth = width//2
 
     def pool(self, npArray):
-        return maxPooling(npArray, self._windowHalfHeight, _windowHalfWidth)
+        return maxPooling(npArray, self._windowHalfHeight, self._windowHalfWidth)
 
 class FastMWMinPooler(Pooler):
 
-    def __init__(self, function, height, width):
+    def __init__(self, height, width):
         """
-        Construc a class:`ConvolutionalPooler` instance
+        Construc a class:`Pooler` instance
 
         Parameters
         ----------
-        function : callable
-            A function as mentionned in the class description
         height : int > 0 odd number
             the window height
         width : int > 0 odd number
@@ -76,7 +70,7 @@ class FastMWMinPooler(Pooler):
         self._windowHalfWidth = width//2
 
     def pool(self, npArray):
-        return minPooling(npArray, self._windowHalfHeight, _windowHalfWidth)
+        return minPooling(npArray, self._windowHalfHeight, self._windowHalfWidth)
 
 
 @cython.wraparound(False)  # Turn off wrapping capabilities (speed up)
@@ -88,8 +82,8 @@ def avgPooling(np.ndarray[np.float64_t, ndim=2] img,
     cdef unsigned int height, width, subrow, subcol, counter
     cdef int   row, col, u, d, l, r, rMin, rMax, cMin, cMax
     cdef double acc
-    height = npArray.shape[0]
-    width = npArray.shape[1]
+    height = img.shape[0]
+    width = img.shape[1]
 
     cdef np.ndarray[np.float64_t, ndim=2] result = np.zeros((height, width))
 
@@ -135,8 +129,8 @@ def maxPooling(np.ndarray[np.float64_t, ndim=2] img,
     cdef unsigned int height, width, subrow, subcol
     cdef int   row, col, u, d, l, r, rMin, rMax, cMin, cMax
     cdef double maxVal
-    height = npArray.shape[0]
-    width = npArray.shape[1]
+    height = img.shape[0]
+    width = img.shape[1]
 
     cdef np.ndarray[np.float64_t, ndim=2] result = np.zeros((height, width))
 
@@ -182,8 +176,8 @@ def minPooling(np.ndarray[np.float64_t, ndim=2] img,
     cdef unsigned int height, width, subrow, subcol
     cdef int   row, col, u, d, l, r, rMin, rMax, cMin, cMax
     cdef double minVal
-    height = npArray.shape[0]
-    width = npArray.shape[1]
+    height = img.shape[0]
+    width = img.shape[1]
 
     cdef np.ndarray[np.float64_t, ndim=2] result = np.zeros((height, width))
 

@@ -483,16 +483,23 @@ class LoadCoordinator(RandConvCoordinator):
         """
         RandConvCoordinator.__init__(self, rcCoordinator._convolExtractor,
                                      rcCoordinator._featureExtractor,
-                                     rcCoordinator._logger,
-                                     rcCoordinator._verbosity)
+                                     rcCoordinator._logger)
         self._learningFile = learningFile
         self._testingFile = testingFile
         self._exec= rcCoordinator._exec
 
-        def process(self, imageBuffer=None, learningPhase=True):
-            if learningPhase:
-                return np.load(self._learningFile)
-            return np.load(self._testingFile)
+    def process(self, imageBuffer=None, learningPhase=True):
+        if learningPhase:
+            X = np.load(self._learningFile)
+        else:
+            X = np.load(self._testingFile)
+        labels = imageBuffer.getLabels()
+        nbFactor = len(X) // len(labels)
+        y = []
+        for label in labels:
+            y += [label]*nbFactor
+
+        return X, y
 
 
 class CompressRandConvCoordinator(RandConvCoordinator):
