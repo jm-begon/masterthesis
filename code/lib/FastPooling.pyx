@@ -29,13 +29,13 @@ class FastMWPooler(Pooler):
         self._windowHalfWidth = width//2
 
     def pool(self, npArray):
-		if npArray.ndim == 2:
-			return self._function(npArray, self._windowHalfHeight, self._windowHalfWidth)
-		ls = []
-          cdef unsigned int i
-		for i in xrange(npArray.shape[2]):
-			ls.append(self._function(npArray[:,:,i], self._windowHalfHeight, self._windowHalfWidth))
-		return np.dstack(ls)
+        if npArray.ndim == 2:
+            return self._function(npArray, self._windowHalfHeight, self._windowHalfWidth)
+        ls = []
+        cdef unsigned int i
+        for i in xrange(npArray.shape[2]):
+            ls.append(self._function(npArray[:,:,i], self._windowHalfHeight, self._windowHalfWidth))
+        return np.dstack(ls)
 
 
 class FastMWAvgPooler(FastMWPooler):
