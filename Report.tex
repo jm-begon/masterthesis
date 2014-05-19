@@ -14,6 +14,10 @@
 \usepackage{amssymb} %Math symbols
 \usepackage{centernot}
 
+%Algorithmic
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+
 %Chimie
 %\usepackage[version=3]{mhchem}
 %cf http://fr.wikibooks.org/wiki/LaTeX/%C3%89crire_des_formules_chimiques
@@ -236,7 +240,11 @@ Although there is no such analytical decomposition for classification, the conce
 \paragraph{}
 The space of candidate model $\mathcal{H}$ is composed of elements of varying complexity. For instance, a decision tree complexity is assessed by its number of nodes. A more complex model will fit the learning set better, thus reducing the resubstitution error. However, fitting this set too well will cause overfitting : the algorithm incorporate set-specific details. This is reflected by the model variance term of the learning algorithm error : slight changes in the learning set will produce very different models. The bias decrease will, at first, surcompensate that increase, yielding a better generalization error. The compensation will work up to the point where the average is of the same order of complexity as the Bayes model. From that point on, the bias decrease will slow down while the model variability still increases. Therefore, the generalization error starts to increase, as well.
 The ability to control the complexity is an important characteristic of a learning algorithm. Another way around this problem is to resort to ensemble methods. Among such methods are the averaging methods which combine several models by averaging their predictions. The models are usually drawn from the same candidate space by either using different learning set or introducing some randomization in the learning algorithm, sometimes both. Ensemble methods rely on the averaging to reduce variability and thus can enjoy more complex models. Ensemble of decision trees form classification forests.
+\paragraph{}
+A learning algorithm is usually dependent of some parameters, which influence the optimization strategy. They are called hyper-parameters so as not to confuse them with the other parameters on which the optimization is performed.
 
+\section{Image classification}
+Traditional learning algorithms are not able to works with ``structured data'' such as texts, images and graphs. Indeed, they expect the individual features to be scalar. Image classification is therefore much more about bridging the two realities than about developing brand new learning algorithm. We will now review the main such techniques.
 
 \chapter{Objectives}
 The hypothesis at the core of the present master thesis can be stated as follows : 
@@ -273,12 +281,47 @@ This chapter is divided into three sections. The first one aims at fully describ
 		\item Generating the $N$ linear filters
 		\item Applying the $N$ filters to the $M$ images of the databases
 		\item Applying the $P$ spatial poolings to the $N \times M$ filtered images
-		\item Extracting $S$ subwindows from each of the $N \times M \times P$ pooled and filtered images
+		\item Extracting $S$ subwindows from each of the $N \times M \times P$ pooled and filtered images and resizing them
 		\item Describing each of the $N \times M \times P \times S$ pieces by a set of learning features
 	\end{enumerate}
 	
-	Thus, from a database of $M$ images, we end up with a feature matrix with $M \times S$ objects described by a number of variables
-	function of $N \times P$.
+	More precisely... Thus, from a database of $M$ images, we end up with a feature matrix with $M \times S$ objects described by a number of variables
+	function of $N \times P$, among other things. The algorithm is summarized at pseudo code \ref{algo:RandConv}.
+	
+	
+	\begin{algorithm}
+		\caption{\label{algo:RandConv}RandConv extraction algorithm}
+		\begin{algorithmic}[1]
+			\Procedure{extract}{$RandConvInstance$, $images$}
+				\State $rci \gets RandConvInstance$
+				\State $N \gets rci.nbFilters$
+				\State $P \gets rci.nbPoolings$
+				\State $S \gets rci.nbSubwindows$
+				\State $F \gets rci.nbFeaturesPerSubwindows$
+				\State $M \gets images.length$
+				\State $\textit{learningMatrix}[M \times S][F \times (N \times P)]$
+				\State $row \gets 0$
+				\State $colMin:colMax \gets 0:F$
+				\For{$image \in images}$
+					\State $cropboxes \gets rci.generateSubwindowLocations()$
+					\For{$filter \in rci.filters$}
+						\For{$pooling \in rci.poolings$}
+							\State $filtered \gets rci.applyFilter(filter, image)$
+							\State $pooled \gets rci.applyPooling(pooling, filtered)$
+							\For{$cropbox \in cropboxes$}
+								\State $subwindow \gets rci.extractSubwindow(cropbox, pooled)$
+								\State $learningMatrix[row][colMin:colMax] = rci.describe(subwindow)$
+								\State $colMin:colMax \gets colMax:colMax+F$
+							\EndFor
+						\EndFor
+					\EndFor
+				\EndFor
+				\Return $learningMatrix$
+			\EndProcedure
+		\end{algorithmic}
+	\end{algorithm}
+	
+	
 	
 	\paragraph{}
 	Although, the method has been designed with the use of classification forest in mind, the RandConv method, \textit{per se}, is actually a feature extraction method. Its goal is to transform a set of images into a set of corresponding feature vectors. The actual classification could be carried out by any traditional learning algorithm. Nevertheless, regarding our primary objective and some other attractive properties of the trees, which will be developed in subsection \ref{subsec:methodo-filtergen}, we will stick with classification forests in one way or another.
@@ -428,7 +471,7 @@ This chapter is divided into three sections. The first one aims at fully describ
 		\subsection{Subwindows extraction}
 		Once the generated filters and the spatial poolings have been applied, it is time to extract subwindows from the images. Extracting subwindows has several advantages. 
 		Firstly, it expands the number of learning objects. Depending on the feature descriptor extraction mechanism, there may be numerous features describing a given image. Using less features but more objects performs usually better. As we mentioned earlier, this is especially true with trees, at least for the ``more objects'' part, where a greater database means a greater tree and therefore a more complex model.
-		Secondly, this approach is more robust towards ...%TODO obstruction and stuff
+		Secondly, this approach is more robust towards scaling and occlusions (\cite{pxitrecap}).
 		Lastly, it can be used as a zone of interest detection system, see for example \cite{mareebiological}. This is an computationally interesting and domainfree alternative to other techniques. Although this is not the focus of the present work, the RandConv method retains this capability as well.
 		While expanding the number of learning objects, we also need to to expand the class label accordingly. Consequently, each subwindows will be described by the label of its original image.
 		
@@ -484,10 +527,10 @@ This chapter is divided into three sections. The first one aims at fully describ
 		The second most important parameter is the pruning parameter. Pruning is the mechanism of stopping the tree creation before its completion. It can be applied either while developping the tree (pre-pruning) or artifically after the tree creation by cutting of some branches. It obviously also impact dearly the number of leaves. The main goal of pruning is to reduce the model complexity and consequently the overfitting. In the ET-DIC variant, pruning is not necessary because the voting takes care of reducing the overfitting. However, on the data fed to the SVM, there is no automatic overfitting control mechanism and the SVM will suffer from it. Therefore, pruning is also very important for this variant.
 		Last but obviously not least, the number of trees multiply the number of leaves. Therefore, this hyper-parameter is even more sensitive than in the ET-DIC approach.
 		\paragraph{}
-		An extensive comparison of both method was carried out in \cite{}. They show that, in most cases, the ET-FL approach performs slightly better (3-4\% in average). Nevertheless, ET-FL is more difficult to tune. 
+		An extensive comparison of both methods was carried out in \cite{}. They show that, in most cases, the ET-FL approach performs slightly better (3-4\% in average). Nevertheless, ET-FL is more difficult to tune. 
 			%Recap hyper-parameters ?
 			
-	\section{Dataset and environment}
+	\section{Dataset and environment} %TODO : cite GIGA computer
 	%CIFAR-10 : Several important results. 288 Go de ram dont 145 en shm. 30 core. frequency ?
 	We worked with the CIFAR-10 database (\cite{cifar}). This dataset is composed of a learning set of 50,000 images and a testing set of 10,000 images. They are grouped into 10 mutually exclusive classes : airplane, automobile, bird, cat, deer, dog, frog, horse, ship and trucks. Both subsets contain an equal number of images from each class. The images have all the same size, 32x32, and are RGB.
 	\par
@@ -646,7 +689,7 @@ This chapter is divided into three sections. The first one aims at fully describ
 			Include original image & True\\
 			Number of spatial poolings & 1 \\
 			Type of spatial poolings & Average moving window \\
-			Size of the neigborhood & 3x3 \\
+			Size of the neigborhood & 3x3 (moving window), 2x2 (aggregation)\\
 			Number of subwindows & 10 \\
 			Cropping size & 24x24 to 32x32 \\
 			Rescaling size & 16x16 \\
@@ -667,10 +710,256 @@ This chapter is divided into three sections. The first one aims at fully describ
 
 		
 \chapter{Result analysis}
-In this chapter, we describe the experiments conducted with our new classification method and analyze their results. The chapter is divided into two sections. The first one tackles the direct classification scheme, where the forest of extremely randomized trees serves as classificator. The second section describes the other variant where the extremely randomized trees are used to create a visual dictionary, while the actual classification is undergone by a support vector machine.
+In this chapter, we describe the experiments conducted with our new classification method and analyze their results. The chapter is divided into two sections. The first one tackles the direct classification scheme (ET-DIC), where the forest of extremely randomized trees serves as classificator. The second section describes the other variant where the extremely randomized trees are used to create a visual dictionary (ET-FL), while the actual classification is undergone by a support vector machine.
+\par
+We will use the following abbreviations :
+\begin{itemize}
+	\item \texttt{rc} : The \textbf{R}and\textbf{C}onv methods without the use of the original image.
+	\item \texttt{rci} : The \textbf{R}and\textbf{C}onv methods with the use of the original \textbf{i}mage. As if the first filter were the identity filter.
+	\item \texttt{pixit} : The method of \cite{}, where there is no filtering or pooling. Only the subwindows extraction
+\end{itemize}
+When the hyper-parameters value are not explicit, the default values are to be assumed (table \ref{tab:DefaultValuesForHyperParameters} of page \pageref{tab:DefaultValuesForHyperParameters}).
+%describe the succession of experiment
 	\section{Direct classification scheme}
+	
+		\subsection{Accuracy as a function of the learning set size}
+		Our first experiment will be to measure how the accuracies of the different methods evolve as a function of the learning set size. We will test the \texttt{rci} method with both types of pooling mechanisms (aggregation and moving window). The aggregation pooling uses a neighborhood of 2x2 while the moving windows are of size 3x3. Both poolings uses an averaging function. We will limit ourselves to the zero-perturbed filter generator for now. In both cases, the same 100 filter are drawn. The 10 extracted subwindows are resized to 16x16. Consequently there are $(16 \times 16 \times 100 \text{ filters} \times 1 \text{ pooling})\times 3 \text{ colors} = 76,800$ features. The accuracy is measured on the whole testing set composed of 10,000 images. The\texttt{pixit} method will serve as reference.
+		\paragraph{}
+		We measure the accuracy for the learning set sizes of 500, 5,000, 10,000, 20,000, 30,000, 40,000 and 50,000. The result of this experiment is depicted by figure \ref{fig:accFLSsize}. The conclusion is clear : the aggregation pooling mechanism is not working (0.38 of accuracy). Although being of the smallest interesting size, the non-overlapping neighborhood windows already lose too much of the information. One might argue that using 3x3 moving subwindows allow for that variant to capture more of the spatial structure than 2x2 neighborhood. However, this does not seem to be the case as using 3x3 neighborhoods yields a lower accuracy of 0.35 for the whole learning set. Therefore, the bad performances of the aggregation mechanism must indeed comes from its abusive spatial compression. This is unfortunate because those poolings suffered less from the rescaling of the extracted subwindows. Considering the gap of accuracy between both methods, the following experiments will focus on the moving window poolings.
+		\par
+		Other observations are worth mentioning. Firstly, the ``good'' RandConv method performs well. It is consistently better than the \texttt{pixit}, although the difference might not be worth the trouble. The RandConv methods takes several hours whereas the \texttt{pixit} requires a couple of minutes at most. 
+		%Secondly, around 30,000 training images the accuracy rate slows down. This indicates that learning set is big enough to create models of the appropriate complexity.
+		Secondly, the graph shows the impact of using only a subset of the data. This information is important in case of hyper-parameter optimization, for instance, where some of the data must be set aside as validation set.
+		
+		\begin{figure}
+			\centering
+				\includegraphics[width=1.0\textwidth]{images/accFLSsize.png}
+			\caption{\label{fig:accFLSsize}Accuracy as a function of the learning set size (30 trees, $k=277$)}
+		\end{figure}
+		
+		\paragraph{}
+		Our best result so far is an accuracy of 0.515 due to the RandConv method with moving windows for spatial pooling. The \texttt{pixit} methods with the same parameters yields an accuracy of 0.50, while its best result is 0.53 for 20 subwindows, 10 trees and a minimum sample to split of 10. We will now analyze the variability of the method and how the method varies with some its hyper-parameters.
+		%Validate small sized filters
+		
+		\subsection{\label{subsec:ETDICVariability}Variability}
+		We now inspect the variability of the accuracy and of the filter importances. We will first look at the situation where the learning matrix is fixed and the variability can only come from the ExtraTrees. It is important to differentiate both types of variability. The one from the ExtraTrees would mainly be due to the high dimensionality of the problem. Indeed, the size of the local random subspace ($k = \sqrt{76,800} \simeq 277$) is relatively small compare to the total number of features : $\frac{277}{76,800} \simeq 3.6 \times 10^{-3}$. Therefore, different trees will end up making different choices. This is, of course, exactly the behavior we are looking for. However, with as few trees as 30, we may expect that different forests will have a high variability on the filter importances and consequently on the accuracy.
+		\par
+		We have run the ExtraTrees 12 times with the same hyper-parameters and the same learning matrix. Table \ref{AccVarTrees} holds the accuracies and table \ref{CorrMatFiltTreeVar} holds the first line of the correlation matrix of the filter importances between the tests. Figure \ref{FIVarTree} depicts the filter importances for the two firsts tests. The test number 0 corresponds to the results given in the previous section. As we can see, the variability is very small. More tests would be needed to establish a rigorous confidence interval but the conclusion seems clear nonetheless : ExtraTrees variability has no impact on the accuracy. This is also backed up by the evident stability of the filter importances. Such stability is due to the smoothing effect of aggregating all the feature importances of a given filter. The overall conclusion is that tree variability has no impact of the method for a given learning matrix. This stability also suggests that hyper-parameters such as the size of the local random subspace ($k$) and the number of trees will play little role to improving the accuracy. We will confirm that with the following experiments. The number of subwindows might, however, have more influence of the accuracy. This will also be established by one of the experiments.
+		\par
+		Let us digress on the filter importances. From figure \ref{FIVarTree}, we can see that several filters have a high importance ; of the same order of magnitude than the original image (filter 0). On the other hand, some filters bring little to none information in the classification process. Either these filters are not (co-)useful or the trees are to small to incorporate their usefulness. In regard to the correlations between tests, however, the co-uselfulness and complexity hypotheses are less likely. If it were one of these problems, the low-rated filters would have developed on different trees and therefore the filter importance profiles would be less similar. Therefore, the most likely hypothesis is that those filters are simply not useful. Inspecting them in parallel of the best ones might reveal information about the classification task. In any case, removing them to make room for more interesting filters can only improve accuracy. Sadly, the gain is unlikely to be substantial. Indeed, the current accuracy gain compare to the \texttt{pixit} is marginal, even though we already have many filters whose importance rivals the original image.
+		
+		
+		\begin{table}
+			\centering
+			\begin{subtable}{0.5\textwidth}
+				\begin{tabular}{c|c}
+				\hline
+				Test number & Accuracy \\
+				\hline \hline
+				0 & 0.5151 \\
+				1 & 0.5119 \\
+				2 & 0.5118 \\
+				3 & 0.5136 \\
+				4 & 0.5135 \\
+				5 & 0.5141 \\
+				6 & 0.5154 \\
+				7 & 0.5114 \\
+				8 & 0.5145 \\
+				9 & 0.5156 \\
+				10 & 0.5148 \\
+				11 & 0.5118 \\
+				\hline
+				\end{tabular}
+				\caption{\label{tab:AccVarTrees}Accuracy variability}
+			\end{subtable}%
+			\begin{subtable}{0.5\textwidth}
+				\begin{tabular}{c|c}
+				\hline
+				Test number & Correlation with test 0\\
+				\hline \hline
+				0 & 1\\
+				1 & 0.998 \\
+				2 & 0.997 \\
+				3 & 0.999 \\
+				4 & 0.997 \\
+				5 & 0.998 \\
+				6 & 0.998 \\
+				7 & 0.998 \\
+				8 & 0.997 \\
+				9 & 0.998 \\
+				10 & 0.998 \\
+				11 & 0.997 \\
+				\hline
+				\end{tabular}
+				\caption{\label{tab:CorrMatFiltTreeVar}Correlation vector of the filter importances with test number 0}
+			\end{subtable}
+			\caption{\label{tab:TreeVar}Variability induced by the tree growing algorithm (same learning matrix)}
+		\end{table}
+		
+		\begin{figure}
+			\begin{subfigure}{.5\textwidth}
+				\centering
+				\includegraphics[width=1.\linewidth]{images/FIVarTree0.png}
+				\caption{\label{fig:FIVarTree0}Test 0}
+			\end{subfigure}%
+			\begin{subfigure}{.5\textwidth}
+				\centering
+				\includegraphics[width=1.\linewidth]{images/FIVarTree1.png}
+				\caption{\label{fig:FIVarTree1}Test 1}
+			\end{subfigure}
+			\caption{\label{fig:FIVarTree}Filter importances for two different forests with the same parameters}			
+		\end{figure}
+		
+		\paragraph{}
+		We now turn to the variability produced by random filter generation with the other parameters fixed to their default values.
+		
+		
+		\subsection{Accuracy as a function of the number of subwindows}
+		As a reminder, the number of subwindows enlarges the learning set and therefore allows for more complex models. In this experiment, we tested how accuracy varied with the number of extracted subwindows. We used 1, 5, 10 and 14 subwindows. The memory limited us to that threshold in order to keep the other parameters to their default values (table \ref{DefaultValuesForHyperParameters}, page \pageref{DefaultValuesForHyperParameters}). We also tested the method where no subwindows are extracted but rather the whole image is used directly. The results are reported at table \ref{AccFNbSW}. The filters were the same in all the tests.
+		\par
+		As we might have suspected, using the whole image yields better accuracy than using only one random subwindows. However, a few of them already accounts for a better accuracy. Judging by the accuracy jump between 5 and 10 subwindows compare to the stagnation between 10 and 14 subwindows, we may conclude that 10 subwindows allows for complex-enough models. 
+		
+		\begin{table}
+			\centering
+				\begin{tabular}{l|l}
+				\hline
+				Number of subwindows & Accuracy \\
+				\hline \hline
+				1 (whole image) & 0.44\\
+				1 (subwindow) & 0.40 \\
+				5 & 0.48 \\
+				10 & 0.515 \\
+				14 &  0.514\\
+				\hline
+				
+				\end{tabular}
+			\caption{\label{tab:AccFNbSW}Accuracy as a function of the number of subwindows}
+		\end{table}
+		
+		
+		\subsection{Influence of the number of trees}
+		The accuracy is usually an increasing function of the number of trees. In this subsection, we will see how this function behaves for our method and we will look at the filter importances as well. In section \ref{subsec:ETDICVariability} about the variability, we foresaw that increasing the number of trees would have little influence on the filter importances. Now is the time to validate this thesis. Once again, the other parameters will be set to the default values of table \ref{tab:DefaultValuesForHyperParameters} on page \pageref{tab:DefaultValuesForHyperParameters} and the learning matrix is the same in all the tests.
+		\paragraph{}
+		In this experiment, we measure the accuracy for the following number of trees : 10, 30, 50, 100, 200, 300, 400 and 500. 
+		
+		%TODO : change accordingly
+		The result of this experiment is depicted by figure \ref{fig:accFnbTrees}. The general trend is indeed an increasing function of the number of trees. The local decreases are small and are due to the randomization of the tree growing algorithm. From a relatively low accuracy of 0.484 at 10 trees, the method quickly jumps to the value of 0.515 for 30 trees. The increase rate is then considerably slowed down before jumping again at 500 trees, yielding 0.532. The first observation to note is that we have attained the best result of the \texttt{pixit} method with half the subwindows. Of course, this must be put in perspective with the variability of the RandConv method. The second conclusion we may draw is that working with 30 trees is representative of the method's accuracy. We can serenely draw conclusions with that many trees and only use more of them to grab the last few percents of accuracy.
+		\begin{figure}
+			\centering
+				\includegraphics[width=1.0\textwidth]{images/accFnbTrees.png}
+			\caption{\label{fig:accFnbTrees}Accuracy as a function of the number of trees}
+		\end{figure}
+		
+		
+		\par
+		We now turn to the filter importances in the classification process. Figure \ref{FINbTrees} shows the eight distributions and table \ref{tab:CorrMatFiltNbTrees} the corresponding correlation matrix. As we had predicted, the number of trees does not impact the filter importances. Therefore, using 30 trees is well enough to assess filter usefulness.
+		
+		\begin{figure}
+			\begin{subfigure}{.5\textwidth}
+				\centering
+				\includegraphics[width=1.\linewidth]{images/FI10trees.png}
+				\caption{\label{fig:FI10trees}10 trees}
+			\end{subfigure}%
+			\begin{subfigure}{.5\textwidth}
+				\centering
+				\includegraphics[width=1.\linewidth]{images/FI30trees.png}
+				\caption{\label{fig:FI30trees}30 trees}
+			\end{subfigure}
+			\begin{subfigure}{.5\textwidth}
+				\centering
+				\includegraphics[width=1.\linewidth]{images/FI50trees.png}
+				\caption{\label{fig:FI50trees}50 trees}
+			\end{subfigure}%
+			\begin{subfigure}{.5\textwidth}
+				\centering
+				\includegraphics[width=1.\linewidth]{images/FI100trees.png}
+				\caption{\label{fig:FI100trees}100 trees}
+			\end{subfigure}
+			%Next four
+			\begin{subfigure}{.5\textwidth}
+				\centering
+				\includegraphics[width=1.\linewidth]{images/FI200trees.png}
+				\caption{\label{fig:FI200trees}200 trees}
+			\end{subfigure}%
+			\begin{subfigure}{.5\textwidth}
+				\centering
+				\includegraphics[width=1.\linewidth]{images/FI300trees.png}
+				\caption{\label{fig:FI300trees}300 trees}
+			\end{subfigure}
+			\begin{subfigure}{.5\textwidth}
+				\centering
+				\includegraphics[width=1.\linewidth]{images/FI400trees.png}
+				\caption{\label{fig:FI400trees}400 trees}
+			\end{subfigure}%
+			\begin{subfigure}{.5\textwidth}
+				\centering
+				\includegraphics[width=1.\linewidth]{images/FI500trees.png}
+				\caption{\label{fig:FI500trees}500 trees}
+			\end{subfigure}
+			\caption{\label{fig:FINbTrees}Filter importances with different numbers of trees}
+			
+		\end{figure}
+		
+		
+		
+		
+		
+		\begin{table}
+			\centering
+				\begin{tabular}{|l||c|c|c|c|c|c|c|c|}
+				\hline
+				Number of trees & 10 & 30 & 50 & 100 & 200 & 300 & 400 & 500 \\
+				\hline \hline
+				10 & 1 & & & & & & &\\
+				\hline
+				30 & 0.19 & 1 & & & & & &\\
+				\hline
+				50 & 0.99 & 0.19 & 1 & & & & & \\
+				\hline
+				100 & 0.05 & 0.06 & 0.05 & 1 & & & & \\
+				\hline
+				200 & 0.99 & 0.19 & 0.99 & 0.05 & 1 & & & \\
+				\hline
+				300 & 0.99 & 0.19 & 0.99 & 0.05 & 0.99 & 1 & & \\
+				\hline
+				400 & 0.99 & 0.19 & 0.99 & 0.05 & 0.99 & 0.99 & 1 & \\
+				\hline
+				500 & 0.14 & 0.15 & 0.15 & 0.12 & 0.14 & 0.15 & 0.15 & 1\\
+				\hline
+				\end{tabular}
+			\caption{\label{tab:CorrMatFiltNbTrees}Correlation matrix of the filter importances with respect to the number of trees}
+		\end{table}
+		
+		\subsection{Influence of the minimum number of samples to split}
+		This parameter control the model complexity. In the previous experiments, the trees were fully grown ($n_{min} = 2$) and variability reduction was achieve through the smoothing effect of the forests prediction aggregation. Still, the model might be too complex to begin with, thus requiring some pruning. We tested the following values of this hyper-parameter : 2, 10, 50, 500. The corresponding accuracies are : 0.515, 0.512, 0.498, 0.453. Once again we see that the default value performs well. Besides, pruning too much the trees is harmful : the models are not complex enough any longer.
+		\par
+		The influence on the filter importances is more interesting. We clearly can identify two groups of filter. The first one is composed of the filters whose importance increases. This increase implies a decrease of the filter importances in the second group. It is thus possible to see where the filter is used in the trees. The first group holds the top of the tree. This was already obvious for the filters whose importance was either large or low. However, this approach sheds more light on the average filters, where we can observe divergent behaviors. Average filters of the second group are purely co-useful filters : they bring little information on their own but are helpful with the other filters. This characteristic resembles the ``V-structures'' of the graphical probabilistic models. On a specific classification task, these particular filters may be worth investigating. It might be difficult to identify the filters on which they depend, however.
+		
+	\subsection{Influence of the number of filters}
+	Our expectation regarding the number of filters is that, with few of them, the accuracy might be better or worse than the \texttt{pixit} depending on the filter usefulnesses. With many filters, however, there should be enough usefulness altogether to be able to beat the \texttt{pixit} systematically. The accuracy should increase accordingly with the number of filters as long as the learning set size allows for complex-enough model. However, from the comment on the variability (subsection \ref{subsec:ETDICVariability}), we suspect that we will reach an upper bound quite fast. 
+	\par
+	From a more practical point of view, we will have to limit ourselves to 
+	, which should not be a problem if we were right about the upper bound.
+		
+	\subsection{Influence of the filter generator}
+	%Compare rci to rc
+	
+	\subsection{Influence of spatial poolings}
+	In this subsection, we tackles the influence of the spatial poolings with a couple of experiments.
+	%rci_zeropert_120_filters no poolings : 0.4912
+
+	%Fortunately, the default parameters works well --> No optimization bias
 	\section{Feature learning scheme}
+	The previous section focused on the ET-DIC pros and cons. We now turn to the ET-FL mode. In this mode, we use totally randomized trees to build a visual dictionary and the actual classification is carried out by a SVM. 
+	\par
+	This mode is less prone to a deep analysis of the influence of the hyper-parameters. The parameter $k$ is fixed to 1, and the number of subwindows, the number of trees and the minimum number of samples to split all influence the number of leaves in a well-understood fashion. An increase in the first two will produce an increase of the number of leaves and ultimately of the discriminant power. Therefore, the number of subwindows will be severely limited by the memory requirement while the number of trees limitation will be the computational time, although to a lesser extent. A good tradeoff must then be found between the number of subwindows and number of filters and spatial poolings. 
+	Since we are not averaging the results any longer, we have lost the ability to reduce the model variability and must resort to pruning in order to limit its complexity. Usually, the optimal pruning should be obtained by cross-validation. However, for our database, a good value of $n_{min} = 500$ has already been established (\cite{}). 
+	%describe the succession of experiment
+	\subsection{Accuracy}
+	
+	
 \chapter{Conclusion and perspective}
+%less overlap than MW but more than aggreg
  
 \bibliographystyle{apalike}
 \bibliography{biblio}
