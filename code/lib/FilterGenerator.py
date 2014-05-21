@@ -261,6 +261,8 @@ class IdMaxL1DistPerturbFG(IdPerturbatedFG):
         self._shuffler.shuffle(ls)
         #Pertubating
         for h, w in ls:
+            if maxDist < 0:
+                break
             val = self._valGen.getNumber(-maxDist, maxDist)
             maxDist -= abs(val)
             linearFilter[h][w] += val

@@ -109,12 +109,12 @@ class GaussianNumberGenerator(NumberGenerator):
             [minVal, maxVal)
         """
         NumberGenerator.__init__(self, minVal, maxVal, seed)
-        self._inRange = 1-(outsideRange/2.)
+        inRange = 1-(outsideRange/2.)
+        self._k = norm.ppf(inRange)
 
     def _doGetNumber(self, minVal, maxVal):
         mean = (maxVal + minVal)/2.
-        k = norm.ppf(self._inRange)
-        std = (mean - minVal)/k
+        std = (mean - minVal)/self._k
         val = self._randGen.normal(mean, std)
         return val
 

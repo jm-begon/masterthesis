@@ -133,7 +133,7 @@ class ConvolutionalExtractor:
             #Extracting the subwindows s.s.
             subwindows = self._swExtractor.extract(img)
             for row in xrange(nbSubWindow):
-                allSubWindows[row][col] = convertor.pILToNumpy(subwindows[row])
+                allSubWindows[row, col] = convertor.pILToNumpy(subwindows[row])
 
         return allSubWindows
 

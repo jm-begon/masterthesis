@@ -35,7 +35,7 @@ class Coordinator(Progressable):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, logger=None, verbosity=None, dtype=np.uint8,
+    def __init__(self, logger=None, verbosity=None, dtype=np.float32,
                  labeltype=np.uint8):
         Progressable.__init__(self, logger, verbosity)
         self._exec = SerialExecutor(logger, verbosity)

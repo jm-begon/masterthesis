@@ -9,7 +9,8 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 
 __all__ = ["Transformer", "Extractor", "IdentityExtractor", "Combinator",
-           "StatelessExtractor", "ImageLinearizationExtractor"]
+           "StatelessExtractor", "ImageLinearizationExtractor",
+           "DepthCompressorILE"]
 
 
 class Transformer:
@@ -313,8 +314,42 @@ class ImageLinearizationExtractor(NumpyTransformer, Extractor):
         """
         return height*width*depth
 
+
+class DepthCompressorILE(ImageLinearizationExtractor):
+
+    def __init__(self, nbColor=2):
+        self._nbCol = nbColor
+        self._resLenght = 0
+        self._depth = 0
+
+    def extract(self, img):
+        res = ImageLinearizationExtractor.extract(self, img)
+        if len(img.shape) < 3 or img.shape[2] < self._nbCol:
+            return res
+        lenRes = len(res)
+        depth = img.shape[2]
+        if self._resLenght != lenRes or self._depth != depth:
+            self._resLenght = lenRes
+            self._depth = depth
+            self._indices = []
+            j = 0
+            for i in xrange(lenRes):
+                if (i + j) % depth < self._nbCol:
+                    self._indices.append(i)
+                if (i+1) % depth == 0:
+                    j += 1
+
+        return res[self._indices]
+
+    def nbFeaturesPerObject(self, height, width, depth):
+        if depth == 1:
+            return height*width
+        if depth < self._nbCol:
+            raise ValueError("Not enough colors")
+        return height*width*self._nbCol
+
 if __name__ == "__main__":
-    test=True
+    test = False
     if test:
         imgpath = "lena.png"
         try:
@@ -322,30 +357,26 @@ if __name__ == "__main__":
         except:
             from PIL import Image
         img = np.array(Image.open(imgpath))
-        red = img[:,:,0]
+        red = img[:, :, 0]
 
         redLin = ImageLinearizationExtractor().extract(red)
 
         imgLin = ImageLinearizationExtractor().extract(img)
 
-        r = np.array([0]*1024, dtype=np.uint8).reshape(32,32)
-        g = np.array([127]*1024, dtype=np.uint8).reshape(32,32)
-        b = np.array([255]*1024, dtype=np.uint8).reshape(32,32)
+        r = np.array([0]*1024, dtype=np.uint8).reshape(32, 32)
+        g = np.array([127]*1024, dtype=np.uint8).reshape(32, 32)
+        b = np.array([255]*1024, dtype=np.uint8).reshape(32, 32)
 
-        img2 = np.dstack((r,g,b))
+        img2 = np.dstack((r, g, b))
 
         img2Lin = ImageLinearizationExtractor().extract(img2)
 
-        r2 = np.array([1]*1024, dtype=np.uint8).reshape(32,32)
-        g2 = np.array([128]*1024, dtype=np.uint8).reshape(32,32)
-        b2 = np.array([250]*1024, dtype=np.uint8).reshape(32,32)
+        r2 = np.array([1]*1024, dtype=np.uint8).reshape(32, 32)
+        g2 = np.array([128]*1024, dtype=np.uint8).reshape(32, 32)
+        b2 = np.array([250]*1024, dtype=np.uint8).reshape(32, 32)
 
-        img3 = np.dstack((r2,g2,b2))
+        img3 = np.dstack((r2, g2, b2))
 
         ls = [img2, img3]
 
         imgLs = ImageLinearizationExtractor()(ls)
-
-
-
-

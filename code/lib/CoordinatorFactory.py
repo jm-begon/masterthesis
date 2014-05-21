@@ -16,7 +16,7 @@ from SubWindowExtractor import (MultiSWExtractor, SubWindowExtractor,
 from NumberGenerator import (OddUniformGenerator, NumberGenerator,
                              CustomDiscreteNumberGenerator,
                              GaussianNumberGenerator)
-from FeatureExtractor import ImageLinearizationExtractor
+from FeatureExtractor import ImageLinearizationExtractor, DepthCompressorILE
 from Pooler import (IdentityPooler, MultiPooler, ConvMinPooler,
                     ConvAvgPooler, ConvMaxPooler, MorphOpeningPooler,
                     MorphClosingPooler)
@@ -54,6 +54,9 @@ class Const:
     POOLING_CONV_MAX = "POOLING_MW_MAX"  # 6
     POOLING_MORPH_OPENING = "POOLING_MORPH_OPENING"  # 7
     POOLING_MORPH_CLOSING = "POOLING_MORPH_CLOSING"  # 8
+
+    FEATEXT_ALL = "FEATEXTRACT_ALL"
+    FEATEXT_SPASUB = "FEATEXTRACT_SPASUB"
 
 
 def coordinatorPixitFactory(
@@ -292,6 +295,15 @@ def getFilterGenerator(policy, parameters, nbFilters, random=False):
     return Finite3SameFilter(baseFilterGenerator, nbFilters)
 
 
+def getFeatureExtractor(policy, **kwargs):
+    if policy is Const.FEATEXT_SPASUB:
+        nbCol = kwargs.get("nbCol", 2)
+        return DepthCompressorILE(nbCol)
+
+    else:  # Suupose Const.FEATEXT_ALL
+        return ImageLinearizationExtractor()
+
+#TODO : include in randconv : (Const.FEATEXT_ALL, {}), (Const.FEATEXT_SPASUB, {"nbCol":2})
 def coordinatorRandConvFactory(
         nbFilters=5,
         filterPolicy=(Const.FGEN_ZEROPERT,
@@ -299,6 +311,7 @@ def coordinatorRandConvFactory(
                        "valGen": Const.RND_RU,
                        "normalization": FilterGenerator.NORMALISATION_MEANVAR}),
         poolings=[(3, 3, Const.POOLING_AGGREG_AVG)],
+        extractor=(Const.FEATEXT_ALL, {}),
         nbSubwindows=10,
         subwindowMinSizeRatio=0.5, subwindowMaxSizeRatio=1.,
         subwindowTargetWidth=16, subwindowTargetHeight=16,
@@ -423,7 +436,7 @@ def coordinatorRandConvFactory(
                                                     multiPooler,
                                                     includeOriginalImage)
     #FEATURE EXTRACTOR
-    featureExtractor = ImageLinearizationExtractor()
+    featureExtractor = getFeatureExtractor(extractor[0], extractor[1])
 
     #LOGGER
     autoFlush = verbosity >= 40

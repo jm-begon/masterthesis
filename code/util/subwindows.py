@@ -4,7 +4,7 @@ Created on Tue May 13 11:23:38 2014
 
 @author: Jm
 """
-
+import numpy as np
 
 def totalSW(w, h):
     h2 = h**2
@@ -61,3 +61,12 @@ def nbSW2(H, W, a, b, A=None, B=None):
     if B is None:
         B = b
     return nbSW1D2(H, a, A)*nbSW1D2(W, b, B)
+
+
+def nbSWonPixel(H, W, r, c):
+    r = r+1
+    c = c+1
+    return (r*H - r**2 + r) * (c*W - c**2 + c)
+
+def probPixels(H, W):
+    prob = np.

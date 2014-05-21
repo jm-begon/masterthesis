@@ -282,17 +282,18 @@ This chapter is divided into three sections. The first one aims at fully describ
 		\item Applying the $N$ filters to the $M$ images of the databases
 		\item Applying the $P$ spatial poolings to the $N \times M$ filtered images
 		\item Extracting $S$ subwindows from each of the $N \times M \times P$ pooled and filtered images and resizing them
-		\item Describing each of the $N \times M \times P \times S$ pieces by a set of learning features
+		\item Describing each of the $N \times M \times P \times S$ pieces by a set of $F$ learning features each
+		\item Reorganizing the data to create a $(M \times S) \times (F \times (N \times P))$ learning matrix
 	\end{enumerate}
 	
-	More precisely... Thus, from a database of $M$ images, we end up with a feature matrix with $M \times S$ objects described by a number of variables
-	function of $N \times P$, among other things. The algorithm is summarized at pseudo code \ref{algo:RandConv}.
+	
+	The algorithm is summarized at pseudo code \ref{algo:RandConv}.
 	
 	
 	\begin{algorithm}
 		\caption{\label{algo:RandConv}RandConv extraction algorithm}
 		\begin{algorithmic}[1]
-			\Procedure{extract}{$RandConvInstance$, $images$}
+			\Procedure{process}{$RandConvInstance$, $images$}
 				\State $rci \gets RandConvInstance$
 				\State $N \gets rci.nbFilters$
 				\State $P \gets rci.nbPoolings$
@@ -417,7 +418,7 @@ This chapter is divided into three sections. The first one aims at fully describ
 			We will now look at the implication of the normalizations on the generator space and the filtering in both the spacial and frequency spaces. We will reuse the filter representation in $\mathbb{R}^n$ and will denote by $\textbf{1}$ the vector whose coefficients are all $1$.
 			
 			\paragraph{Zero mean normalization.}
-			In $\mathbb{R}^n$, the zero mean filters form the hyperplane $\{x \in \mathbb{R}^n | \textbf{1}^{T}x = 0\}$. The normalization is a projection onto that hyperplane. The resulting filter $y$ is computed as $y = x - frac{1}{n}\textbf{1}^{T}x\textbf{1}$. This operation can produce a filter which is outside of the original filter space.
+			In $\mathbb{R}^n$, the zero mean filters form the hyperplane $\{x \in \mathbb{R}^n | \textbf{1}^{T}x = 0\}$. The normalization is a projection onto that hyperplane. The resulting filter $y$ is computed as $y = x - \frac{1}{n}\textbf{1}^{T}x\textbf{1}$. This operation can produce a filter which is outside of the original filter space.
 			Since this operation is linear, the impact of the filtering are straightforwardly identifiable. Denoting $I$ a given image, $x_f$ a given filter, whose mean $m$ form the constant filter $m_f$, $y_f$ the normalization $ y_f = x_f - m_f$ and $\textbf{1}_f$ the constant filter with only ones as coefficients, we have : 
 			\[
 				I * y_f = (I * x_f) - (I * m_f) = (I * x_f) - m \times (I * \textbf{1}_f)
@@ -544,6 +545,8 @@ This chapter is divided into three sections. The first one aims at fully describ
 	
 	\section{Implementation}
 	%Somewhere : Scikit-learn for extra-trees + liblinear via scikitlearn
+	
+	%TODO !!! Parallelization
 	In this section, we dive into implementation. We will not go over all the elements in detail again but rather see how the discussions of the previous sections translate into code. In a second subsection we will also develop technical limitations.
 		\subsection{Software architecture}
 		A major concern of the design was to allow as much room as possible for flexibility, so as to be able to develop extensions and variants of the method rapidly. Consequently, the code was split into many classes. A drawback of this is that assembling all the pieces together might be difficult. Factory methods are provided to help with this issue but care must be taken to build up a coherent classifier. We will go back on this in a short while. 
@@ -811,10 +814,76 @@ When the hyper-parameters value are not explicit, the default values are to be a
 		\end{figure}
 		
 		\paragraph{}
-		We now turn to the variability produced by random filter generation with the other parameters fixed to their default values.
+		We now turn to the variability produced by the RandConv with the other parameters fixed to their default values. There are three sources of variability :
+		
+		\begin{itemize}
+			\item The filter generated
+			\item The subwindows extracted
+			\item The trees built
+		\end{itemize}
+		
+		As we have just seen, the last source of variability is negligible, therefore, we will mainly assess the first two ones. We ran 10 more tests whose accuracies are shown in table \ref{tab:VarZeropertAcc}. Test 0 corresponds to our previous test. Once again, more tests would be required to establish a proper confidence interval but the variability, although more important than previously, seems to be quite low. Tests number 0 and number 1 are particularly good. Nevertheless, this has to be put in perspective : such low range of accuracies, although always welcome for a practical application, is not really significant in our context.
+		\par
+		Since we are using different filters, the importance profiles will be different from one another. Figure \ref{fig:FIGVar} illustrates this for the tests number 1, 5, 6 and 10. We expect the ideal situation to be when all the filters have the roughly same importances. Nevertheless, how the filter importances the accuracy in other circumstances is unclear and cannot be determined from the importance profile. This is made clearer by comparing the cumulative importances of several tests. Figure \ref{fig:FIGVarCumHist} depicts the situation for tests number 0, 1 and 6. For the 30 most influential filters, test 6 is between the other two curves, therefore we cannot predict anything about the accuracy. After that point, test 6 depicts a greater cumulative filter importance. This situation also implies that there are more lowly important filter in test 6 than test 0 or 1. Once again, we cannot deduce anything from it because test 1 is also greater than test 0 in term of both the cumulative filter importance and accuracy. Besides, the cumulative profile of test 5 is nearly identical to the one of test 0. Therefore, it is impossible to assess finely the accuracy from the importance profile.
 		
 		
-		\subsection{Accuracy as a function of the number of subwindows}
+		\begin{table}
+			\centering
+				\begin{tabular}{l|l}
+				\hline
+				Test number & Accuracy \\
+				\hline \hline
+				0 & 0.5151 \\
+				1 & 0.5183 \\
+				2 & 0.5117 \\
+				3 & 0.5137 \\
+				4 & 0.5095 \\
+				5 & 0.5094 \\
+				6 & 0.5093 \\
+				7 & 0.5117 \\
+				8 & 0.5129 \\
+				9 & 0.5116 \\
+				10 & 0.5124 \\
+				\hline
+				\end{tabular}
+			\caption{\label{tab:VarZeropertAcc}Accuracy of several tests}
+		\end{table}
+		
+		
+		\begin{figure}
+			\begin{subfigure}{.5\textwidth}
+				\centering
+				\includegraphics[width=1.\linewidth]{images/FIGVar1.png}
+				\caption{\label{fig:FIGVar1}}
+			\end{subfigure}%
+			\begin{subfigure}{.5\textwidth}
+				\centering
+				\includegraphics[width=1.\linewidth]{images/FIGVar5.png}
+				\caption{\label{fig:FIGVar5}}
+			\end{subfigure}
+			\begin{subfigure}{.5\textwidth}
+				\centering
+				\includegraphics[width=1.\linewidth]{images/FIGVar6.png}
+				\caption{\label{fig:FIGVar6}}
+			\end{subfigure}%
+			\begin{subfigure}{.5\textwidth}
+				\centering
+				\includegraphics[width=1.\linewidth]{images/FIGVar10.png}
+				\caption{\label{fig:FIGVar10}}
+			\end{subfigure}
+			\caption{\label{fig:FIGVar}Filter importances with global variability}
+		\end{figure}
+		
+		\begin{figure}
+			\centering
+				\includegraphics[width=1.0\textwidth]{images/FIGVarCumHist.png}
+			\caption{\label{fig:FIGVarCumHist}Cumulative filter importance (first 80 filters)}
+		\end{figure}
+		
+		\paragraph{}
+		So far, we have learned that the RandConv method was surprisingly stable. Fortunately, this will allow us to draw conclusions from few experiments, a welcome surprise considering their running time. We will now inspect further the influence hyper-parameters with a same set of filters if not a same learning matrix.
+		
+		\subsection{Influence of the number of subwindows}
 		As a reminder, the number of subwindows enlarges the learning set and therefore allows for more complex models. In this experiment, we tested how accuracy varied with the number of extracted subwindows. We used 1, 5, 10 and 14 subwindows. The memory limited us to that threshold in order to keep the other parameters to their default values (table \ref{DefaultValuesForHyperParameters}, page \pageref{DefaultValuesForHyperParameters}). We also tested the method where no subwindows are extracted but rather the whole image is used directly. The results are reported at table \ref{AccFNbSW}. The filters were the same in all the tests.
 		\par
 		As we might have suspected, using the whole image yields better accuracy than using only one random subwindows. However, a few of them already accounts for a better accuracy. Judging by the accuracy jump between 5 and 10 subwindows compare to the stagnation between 10 and 14 subwindows, we may conclude that 10 subwindows allows for complex-enough models. 
@@ -830,6 +899,7 @@ When the hyper-parameters value are not explicit, the default values are to be a
 				5 & 0.48 \\
 				10 & 0.515 \\
 				14 &  0.514\\
+				18 &  0.521 \\
 				\hline
 				
 				\end{tabular}
@@ -838,12 +908,12 @@ When the hyper-parameters value are not explicit, the default values are to be a
 		
 		
 		\subsection{Influence of the number of trees}
-		The accuracy is usually an increasing function of the number of trees. In this subsection, we will see how this function behaves for our method and we will look at the filter importances as well. In section \ref{subsec:ETDICVariability} about the variability, we foresaw that increasing the number of trees would have little influence on the filter importances. Now is the time to validate this thesis. Once again, the other parameters will be set to the default values of table \ref{tab:DefaultValuesForHyperParameters} on page \pageref{tab:DefaultValuesForHyperParameters} and the learning matrix is the same in all the tests.
+		The accuracy is usually an increasing function of the number of trees. In this subsection, we will see how this function behaves for our method and we will look at the filter importances as well. In section \ref{subsec:ETDICVariability} about the variability, we foresaw that increasing the number of trees would have little influence on the filter importances. Now is the time to validate this thesis. Once again, the other parameters will be set to the default values of table \ref{tab:DefaultValuesForHyperParameters} on page \pageref{tab:DefaultValuesForHyperParameters} and the learning matrix is the same in all the tests. Consequently, the only source of variability is due to the forest creation.
 		\paragraph{}
-		In this experiment, we measure the accuracy for the following number of trees : 10, 30, 50, 100, 200, 300, 400 and 500. 
+		In this experiment, we measure the accuracy for the following number of trees : 10, 30, 50, 100, 300 and 500. 
 		
 		%TODO : change accordingly
-		The result of this experiment is depicted by figure \ref{fig:accFnbTrees}. The general trend is indeed an increasing function of the number of trees. The local decreases are small and are due to the randomization of the tree growing algorithm. From a relatively low accuracy of 0.484 at 10 trees, the method quickly jumps to the value of 0.515 for 30 trees. The increase rate is then considerably slowed down before jumping again at 500 trees, yielding 0.532. The first observation to note is that we have attained the best result of the \texttt{pixit} method with half the subwindows. Of course, this must be put in perspective with the variability of the RandConv method. The second conclusion we may draw is that working with 30 trees is representative of the method's accuracy. We can serenely draw conclusions with that many trees and only use more of them to grab the last few percents of accuracy.
+		The result of this experiment is depicted by figure \ref{fig:accFnbTrees}. As expected, we observe an increasing function of the number of trees. The local decreases are small and are due to the randomization of the tree growing algorithm. From a relatively low accuracy of 0.492 at 10 trees, the method quickly jumps to the value of 0.515 for 30 trees and then to 0.521 at 50 trees. The increase slows down a bit at 100 trees with an accuracy of 0.526. After that, the increase rate drops considerably. Two remarks are in order. Firstly, we observe the classical increasing pattern, which means that the number of trees can be chosen solely with respect to the allowable computational budget. However, for a given learning matrix, the accuracy is upper bounded, as we can see from the rate decrease. Secondly, the 30-trees accuracy is closer to the 500-trees' than to the 10-trees'. Adding our observation about variability, we may conclude that using 30 trees allow us a good assessment of the method characteristics. 
 		\begin{figure}
 			\centering
 				\includegraphics[width=1.0\textwidth]{images/accFnbTrees.png}
@@ -852,83 +922,25 @@ When the hyper-parameters value are not explicit, the default values are to be a
 		
 		
 		\par
-		We now turn to the filter importances in the classification process. Figure \ref{FINbTrees} shows the eight distributions and table \ref{tab:CorrMatFiltNbTrees} the corresponding correlation matrix. As we had predicted, the number of trees does not impact the filter importances. Therefore, using 30 trees is well enough to assess filter usefulness.
-		
-		\begin{figure}
-			\begin{subfigure}{.5\textwidth}
-				\centering
-				\includegraphics[width=1.\linewidth]{images/FI10trees.png}
-				\caption{\label{fig:FI10trees}10 trees}
-			\end{subfigure}%
-			\begin{subfigure}{.5\textwidth}
-				\centering
-				\includegraphics[width=1.\linewidth]{images/FI30trees.png}
-				\caption{\label{fig:FI30trees}30 trees}
-			\end{subfigure}
-			\begin{subfigure}{.5\textwidth}
-				\centering
-				\includegraphics[width=1.\linewidth]{images/FI50trees.png}
-				\caption{\label{fig:FI50trees}50 trees}
-			\end{subfigure}%
-			\begin{subfigure}{.5\textwidth}
-				\centering
-				\includegraphics[width=1.\linewidth]{images/FI100trees.png}
-				\caption{\label{fig:FI100trees}100 trees}
-			\end{subfigure}
-			%Next four
-			\begin{subfigure}{.5\textwidth}
-				\centering
-				\includegraphics[width=1.\linewidth]{images/FI200trees.png}
-				\caption{\label{fig:FI200trees}200 trees}
-			\end{subfigure}%
-			\begin{subfigure}{.5\textwidth}
-				\centering
-				\includegraphics[width=1.\linewidth]{images/FI300trees.png}
-				\caption{\label{fig:FI300trees}300 trees}
-			\end{subfigure}
-			\begin{subfigure}{.5\textwidth}
-				\centering
-				\includegraphics[width=1.\linewidth]{images/FI400trees.png}
-				\caption{\label{fig:FI400trees}400 trees}
-			\end{subfigure}%
-			\begin{subfigure}{.5\textwidth}
-				\centering
-				\includegraphics[width=1.\linewidth]{images/FI500trees.png}
-				\caption{\label{fig:FI500trees}500 trees}
-			\end{subfigure}
-			\caption{\label{fig:FINbTrees}Filter importances with different numbers of trees}
-			
-		\end{figure}
-		
-		
-		
-		
+		We now turn to the filter importances in the classification process. Table \ref{tab:CorrVecNbTrees} displays the filter importance correlation between the test with 10 trees and the other tests. As we had predicted, the number of trees does not impact the filter importances. Therefore, using 30 trees is well enough to assess filter usefulness as well.
 		
 		\begin{table}
 			\centering
-				\begin{tabular}{|l||c|c|c|c|c|c|c|c|}
+				\begin{tabular}{l|l}
 				\hline
-				Number of trees & 10 & 30 & 50 & 100 & 200 & 300 & 400 & 500 \\
+				Number of trees & Correlation \\
 				\hline \hline
-				10 & 1 & & & & & & &\\
-				\hline
-				30 & 0.19 & 1 & & & & & &\\
-				\hline
-				50 & 0.99 & 0.19 & 1 & & & & & \\
-				\hline
-				100 & 0.05 & 0.06 & 0.05 & 1 & & & & \\
-				\hline
-				200 & 0.99 & 0.19 & 0.99 & 0.05 & 1 & & & \\
-				\hline
-				300 & 0.99 & 0.19 & 0.99 & 0.05 & 0.99 & 1 & & \\
-				\hline
-				400 & 0.99 & 0.19 & 0.99 & 0.05 & 0.99 & 0.99 & 1 & \\
-				\hline
-				500 & 0.14 & 0.15 & 0.15 & 0.12 & 0.14 & 0.15 & 0.15 & 1\\
+				10 & 1 \\
+				30 & 0.996 \\
+				50 & 0.998 \\
+				100 & 0.998 \\
+				300 & 0.998 \\
+				500 & 0.998 \\
 				\hline
 				\end{tabular}
-			\caption{\label{tab:CorrMatFiltNbTrees}Correlation matrix of the filter importances with respect to the number of trees}
+			\caption{\label{tab:CorrVecNbTrees}Filter importance correlation with 10 trees}
 		\end{table}
+		
 		
 		\subsection{Influence of the minimum number of samples to split}
 		This parameter control the model complexity. In the previous experiments, the trees were fully grown ($n_{min} = 2$) and variability reduction was achieve through the smoothing effect of the forests prediction aggregation. Still, the model might be too complex to begin with, thus requiring some pruning. We tested the following values of this hyper-parameter : 2, 10, 50, 500. The corresponding accuracies are : 0.515, 0.512, 0.498, 0.453. Once again we see that the default value performs well. Besides, pruning too much the trees is harmful : the models are not complex enough any longer.
@@ -936,17 +948,141 @@ When the hyper-parameters value are not explicit, the default values are to be a
 		The influence on the filter importances is more interesting. We clearly can identify two groups of filter. The first one is composed of the filters whose importance increases. This increase implies a decrease of the filter importances in the second group. It is thus possible to see where the filter is used in the trees. The first group holds the top of the tree. This was already obvious for the filters whose importance was either large or low. However, this approach sheds more light on the average filters, where we can observe divergent behaviors. Average filters of the second group are purely co-useful filters : they bring little information on their own but are helpful with the other filters. This characteristic resembles the ``V-structures'' of the graphical probabilistic models. On a specific classification task, these particular filters may be worth investigating. It might be difficult to identify the filters on which they depend, however.
 		
 	\subsection{Influence of the number of filters}
-	Our expectation regarding the number of filters is that, with few of them, the accuracy might be better or worse than the \texttt{pixit} depending on the filter usefulnesses. With many filters, however, there should be enough usefulness altogether to be able to beat the \texttt{pixit} systematically. The accuracy should increase accordingly with the number of filters as long as the learning set size allows for complex-enough model. However, from the comment on the variability (subsection \ref{subsec:ETDICVariability}), we suspect that we will reach an upper bound quite fast. 
+	Our expectation regarding the number of filters is that, with few of them, the accuracy might be better or worse than the \texttt{pixit}'s depending on the filter usefulnesses. With many filters, however, there should be enough usefulness altogether to be able to beat the \texttt{pixit} systematically. The accuracy should increase accordingly with the number of filters as long as the learning set size allows for complex-enough model. However, from the comment on the variability (subsection \ref{subsec:ETDICVariability}), we suspect that we will reach an upper bound quite fast. 
 	\par
-	From a more practical point of view, we will have to limit ourselves to 
-	, which should not be a problem if we were right about the upper bound.
+	From a more practical point of view, we will have to limit ourselves to 180 filters, which should not be a problem if we were right about the upper bound. Table \ref{tab:AccFNbFilt} presents the accuracies for 10, 38 (the number of filters in the custom generator),100, 120, 180 filters. As we can see, from 100 filters on, there is no accuracy gain and the filter and subwindow variabilities are responsible for the slight differences of accuracy. We would need a more profound analysis to determine whether or not the accuracy obtained with 38 filters is statically inferior to the 100 filter case's. In any case, it is closer to the accuracy of the 100 filters than of the 10 filters.
+	
+	\begin{table}
+		\centering
+			\begin{tabular}{l|l}
+			\hline
+			Number of filters & Accuracy \\
+			\hline \hline
+			10  & 0.4831 \\
+			38 & 0.5087 \\
+			100 & 0.5151 \\
+			120 & 0.5112 \\
+			180 & 0.5150 \\
+			\hline
+			\end{tabular}
+		\caption{\label{tab:AccFNbFilt}Influence of the number of filters on the accuracy}
+	\end{table}
+	
 		
 	\subsection{Influence of the filter generator}
 	%Compare rci to rc
 	
 	\subsection{Influence of spatial poolings}
-	In this subsection, we tackles the influence of the spatial poolings with a couple of experiments.
+	In this subsection, we tackle the influence of the spatial poolings with a couple of experiments. We will resort to the 39 custom filters so as to be able to use several poolings. The only source of randomness is the drawing of subwindows. The influence on the accuracy is summarized by table \ref{tab:AccFpoolings}. We can clearly see that the poolings have a beneficial effect on the accuracy, in particular the maximum. %test with maximal pooling on zeropert
 	%rci_zeropert_120_filters no poolings : 0.4912
+	Choosing the best pooling must either be done by cross-validation or not done : using several poolings should not reduce the accuracy dramatically. The main drawback of this last option is that the memory might be better used in another fashion. Using the same pooling at different spatial scales is may or may not be interesting.
+	
+	\begin{table}
+		\centering
+			\begin{tabular}{l|l}
+			\hline
+			Number of filters & Accuracy \\
+			\hline \hline
+			no pooling & 0.4816 \\
+			3x3 minimum & 0.5151\\
+			3x3 average & 0.5057 \\
+			3x3 maximum & 0.5476 \\
+			3x3 min., avg. max. & 0.5454 \\
+			3x3, 5x5, 7x7 avg. & 0.5173 \\
+			3x3, 5x5, 7x7 max. & 0.5741 \\
+			\hline
+			\end{tabular}
+		\caption{\label{tab:AccFpoolings}Influence of the poolings on the accuracy with the custom filters}
+	\end{table}
+	
+	\paragraph{}
+	We now turn to the filter importances. Figure \ref{fig:FIPool} depicts the profiles for the single pooling cases. Some filters always have a high or low importance. For other filters, however, the importances vary. Concerning the profiles, if not the accuracies, the no pooling and average strategies are close, with a correlation of 0.954 (see the correlation matrix on table \ref{tab:FIPoolCorr}). The major difference comes from the number 20, which is a high pass filter. %Have a look at frequency response with and without the averaging
+	The other pieces of information given by the correlation matrix are as one might expect.
+	More interesting, we can observe that the profiles can be importantly influenced by the pooling, which means that it does bring information and increase some filter usefulnesses. In the occasion of filter 28 (the west compass gradient mask), the maximum pooling even goes as far as giving it more importance than other filters appreciated by the remaining poolings. 
+	Interpreting the cumulative importance diagram (figure \ref{fig:FIPoolSeveral}) is, once more, complicated and we will limit ourselves to the following observation. The maximum pooling is the closet example to a straight line (the ideal situation where every filter has the same importance) we have seen so far and also scores the best accuracy for now. Despite the closeness of the no pooling strategy, however, it does not score a high accuracy.
+	
+	
+	\begin{figure}
+		\begin{subfigure}{.5\textwidth}
+			\centering
+			\includegraphics[width=1.\linewidth]{images/FIPoolNo.png}
+			\caption{\label{fig:FIPoolNo}}
+		\end{subfigure}%
+		\begin{subfigure}{.5\textwidth}
+			\centering
+			\includegraphics[width=1.\linewidth]{images/FIPoolMin.png}
+			\caption{\label{fig:FIPoolMin}}
+		\end{subfigure}
+		\begin{subfigure}{.5\textwidth}
+			\centering
+			\includegraphics[width=1.\linewidth]{images/FIPoolAvg.png}
+			\caption{\label{fig:FIPoolAvg}}
+		\end{subfigure}%
+		\begin{subfigure}{.5\textwidth}
+			\centering
+			\includegraphics[width=1.\linewidth]{images/FIPoolMax.png}
+			\caption{\label{fig:FIPoolMax}}
+		\end{subfigure}
+		\caption{\label{fig:FIPool}Filter importances with different types of poolings}
+	\end{figure}
+	
+	
+	\begin{table}
+		\centering
+			\begin{tabular}{|c||c|c|c|c|}
+			\hline
+			Pooling & no pooling & 3x3 minimum & 3x3 average & 3x3 maximum\\
+			\hline \hline 
+			no pooling & 1 & & &  \\
+			\hline
+			3x3 minimum & 0.762 & 1 & & \\
+			\hline
+			3x3 average & 0.954 & 0.826 & 1 & \\
+			\hline
+			3x3 maximum & 0.723 & 0.226 & 0.661 & 1 \\
+			\hline
+			\end{tabular}
+		\caption{\label{tab:FIPoolCorr}Correlation matrix of the filter importances between the poolings}
+	\end{table}
+	
+	
+	\begin{figure}
+		\centering
+			\includegraphics[width=1.0\textwidth]{images/FIPoolCumul.png}
+		\caption{\label{fig:FIPoolCumul}Cumulative filter importances with different types of poolings}
+	\end{figure}
+	
+	\par
+	The observation of single pooling strategies bode well for their combine application. Yet, it may happen that they shade each other in a co-utilization scenario. In turns out this is a empty threat. The correlation between the corresponding importances are above 0.96 for all the pooling strategies (no pooling included). This is visually illustrated by figure \ref{fig:FIPoolNoAvgMinMax}. Each group of four bars belong to the same linear filter. 
+	
+	\begin{figure}
+		\centering
+			\includegraphics[width=1.0\textwidth]{images/FIPoolNoAvgMinMax.png}
+		\caption{\label{fig:FIPoolNoAvgMinMax}Filter importances with several poolings}
+	\end{figure}
+	
+	\par
+	Figure \ref{fig:FIPoolScale} displays the filter profile for several poolings only differing by the moving window size. Most filters seems to favor larger windows. This (non-)locality preference is problem dependent.
+	
+	
+	\begin{figure}
+		\begin{subfigure}{.5\textwidth}
+			\centering
+			\includegraphics[width=1.\linewidth]{images/FIPoolAvg357.png}
+			\caption{\label{fig:FIPoolAvg357}}
+		\end{subfigure}%
+		\begin{subfigure}{.5\textwidth}
+			\centering
+			\includegraphics[width=1.\linewidth]{images/FIPoolMax357.png}
+			\caption{\label{fig:FIPoolMax357}}
+		\end{subfigure}
+		\caption{\label{fig:FIPoolScale}Filter importances with several pooling scales}
+	\end{figure}
+		
+	
+	\paragraph{}
+	Using a more appropriate spatial pooling is what has brought us the best improvement so far. Since poolings do not interfere with each other, an alternative to picking the best one is simply to use several. In doubt, a combination of the minimum and maximum pooling should do. If the best one is known, however, it might be worth investing the extra free memory to additional subwindows.
+	
 
 	%Fortunately, the default parameters works well --> No optimization bias
 	\section{Feature learning scheme}

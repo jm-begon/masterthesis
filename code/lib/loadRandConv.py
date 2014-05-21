@@ -24,7 +24,7 @@ learnFile = "LearningSet.npy"
 testFile = "TestinggSet.npy"
 #======PROB MATRIX=========#
 saveFile = "rc_"
-shouldSave = True
+shouldSave = False
 #======HYPER PARAMETERS======#
 #----RandConv param
 #Filtering
@@ -50,6 +50,11 @@ poolings = [
 #        (3, 3, Const.POOLING_POOL_MIN),
 #        (3, 3, Const.POOLING_POOL_MAX)
         ]
+
+#Extraction
+extractor = (Const.FEATEXT_ALL, {})
+#extractor =  (Const.FEATEXT_SPASUB, {"nbCol":2})
+#extractor =  (Const.FEATEXT_SPASUB, {"nbCol":1})
 
 #Subwindow
 nbSubwindows = 10
@@ -95,6 +100,7 @@ testingIndexFile = "0index"
 def run(nb_filters=nb_filters,
         filterPolicy=filterPolicy,
         poolings=poolings,
+        extractor=extractor,
         nbSubwindows=nbSubwindows,
         subwindowMinSizeRatio=subwindowMinSizeRatio,
         subwindowMaxSizeRatio=subwindowMaxSizeRatio,
@@ -138,12 +144,13 @@ def run(nb_filters=nb_filters,
     randConvCoord = coordinatorRandConvFactory(
         nbFilters=nb_filters,
         filterPolicy=filterPolicy,
+        poolings=poolings,
+        extractor=extractor,
         nbSubwindows=nbSubwindows,
         subwindowMinSizeRatio=subwindowMinSizeRatio,
         subwindowMaxSizeRatio=subwindowMaxSizeRatio,
         subwindowTargetWidth=subwindowTargetWidth,
         subwindowTargetHeight=subwindowTargetHeight,
-        poolings=poolings,
         subwindowInterpolation=subwindowInterpolation,
         includeOriginalImage=includeOriginalImage,
         nbJobs=nbJobs,

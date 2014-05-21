@@ -104,7 +104,6 @@ if __name__ == "__main__":
     confMat = classifier.confusionMatrix(y_pred, y_truth)
 
     print "==================Bag of Visual Words======================="
-    print "random", random
     print "--------Bag of words params + SVC----------"
     print "nbJobsEstimator", nbJobsEstimator
     print "verbose", verbose
