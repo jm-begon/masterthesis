@@ -202,7 +202,7 @@
 \tableofcontents
 
 \chapter{Introduction}
-
+%==========================================================================================================================================
 \chapter{State of the art}
 The early days of computer vision have seen the development of myriads of domain specific methods, notably in the field of image classification. Image classification is the process of assigning the correct label from a predefined set to an image. The main drawback of the domain specificity is that solutions are not necessarily transposable to other domains. The supervised machine learning framework sidestep this limitation by making no assumptions about the particular domain of application. Rather, it proposes a representation general enough for most problem to fit in, albeit with some preprocessing. Overcoming the domain specificity is achieved by letting the computer \textit{learn} the discrimination scheme instead of supplying it.
 \par
@@ -210,11 +210,11 @@ This chapter is divided in two sections. In the first one, we review the supervi
 
 
 \section{Supervised learning.}
-At the framework core are objects, also called individuals. The objects differ from each other by their features, also called variables. Among them is one which holds a special status : the output variable. The ultimate goal of a supervised learning algorithm is to produce a model mapping a previously unseen object's regular features to the output variable. Thus, the learning algorithm needs a space of candidate models. In order to provide the most adequate model out of the candidates, the algorithm needs two additional elements : a quality measure and an optimization strategy. It is sometimes more convenient to use the inverse of the quality measure : the loss function. We talk about \textit{learning} because the algorithm optimizes the quality measure using a set of objects, called the learning set. 
+At the framework core are objects, also called individuals. The objects differ from each other by their features, also called variables. Among them is one which holds a special status : the output variable. The ultimate goal of a supervised learning algorithm is to produce a model mapping a previously unseen object's regular features to the output variable. Thus, the learning algorithm needs a space of candidate models. In order to provide the most adequate model out of the candidates, the algorithm needs two additional elements : a quality measure (or inversely a loss function) and an optimization strategy. We talk about \textit{inductive learning} because the algorithm optimizes the quality measure using a set of objects ; the learning set. 
 \par
-More formally, the learning set $LS = \{ (\boldsymbol{x}_i, y_i) | i = 1,..., N\}$ is composed of $N$ objects. Each object $i$ is described by a tuple of features : $\boldsymbol{x}_i \in \mathcal{X}$ are the regular features and $y_i \in \mathcal{Y}$ is the output variable. We represent the learning algorithm hypothesis space by $\mathcal{H}$ and its quality measure by $\ell : \mathcal{Y} \times \mathcal{Y} \rightarrow \mathbb{R}$. The learning algorithm maps the learning set to a function $f \in \mathcal{H} : \mathcal{X} \rightarrow \mathcal{Y}$ so as to try to minimize some expectation over the loss function. Depending on the structure of $\mathcal{Y}$, the model either performs a regression or a classification.
+More formally, the learning set $LS = \{ (\boldsymbol{x}_i, y_i) | i = 1,..., N\}$ is composed of $N$ objects. Each object $i$ is described by a tuple of features : $\boldsymbol{x}_i \in \mathcal{X}$ are the regular features and $y_i \in \mathcal{Y}$ is the output variable. We represent the learning algorithm's hypothesis space by $\mathcal{H}$ and its quality measure by $\ell : \mathcal{Y} \times \mathcal{Y} \rightarrow \mathbb{R}$. The learning algorithm maps the learning set to a function $f \in \mathcal{H} : \mathcal{X} \rightarrow \mathcal{Y}$ so as to try to minimize some expectation over the loss function. Depending on the structure of $\mathcal{Y}$, the model either performs a regression or a classification.
 \par
-The most usual quality measures are the square error $\ell(y, \hat{y}) = (y - \hat{y})^2$ for regression problems and the classification error
+The most usual loss functions are the square error $\ell(y, \hat{y}) = (y - \hat{y})^2$ for regression problems and the classification error
 \[
 \boldsymbol{1}_{\neq}(y,\hat{{y}})=\begin{cases}
 \begin{array}{c}
@@ -222,69 +222,117 @@ The most usual quality measures are the square error $\ell(y, \hat{y}) = (y - \h
 0\text{ otherwise}
 \end{array}\end{cases}
 \]
-for classification problems. Based on those loss functions, we can define the expected error by $E_{\boldsymbol{x},y} \{\ell(f(\boldsymbol{x}), y)\}$. If we dispose of a testing set $TS = \{ (\boldsymbol{x}_i, y_i) | i = 1,..., M\}$ with a sufficiently large $M$, we can assess the expected error by $\frac{1}{M}\sum_{\boldsymbol{x}, y \in TS} \ell(f(\boldsymbol{x}), y)$. If $TS = LS$, we call this the resubstitution error. However, we are generally interested in the case where both sets are different while coming from the same distribution. We then talk about generalization error. This is the error we are trying to minimize.
+for classification problems. Based on those loss functions, we can define the expected error by $E_{\boldsymbol{x},y} \{\ell(f(\boldsymbol{x}), y)\}$. If we dispose of a testing set $TS = \{ (\boldsymbol{x}_i, y_i) | i = 1,..., M\}$ with a sufficiently large $M$, we can assess the expected error by $\frac{1}{M}\sum_{\boldsymbol{x}, y \in TS} \ell(f(\boldsymbol{x}), y)$. If $TS = LS$, we call this the resubstitution error. However, we are generally interested in the case where both sets are different while coming from the same distribution. We then talk about generalization error. It is the error we are trying to minimize.
 
 \begin{leftbar}
 	\paragraph{The example of decision trees.}
 	\paragraph{}
-	Decision tree (\cite{decisiontrees}) is a good example of classification algorithm. More accurately, the decision tree is the model produced and the learning algorithm is the growing algorithm. The decision tree is a binary tree where each interior node represent a dichotomic choice regarding one regular feature and each leaf is labeled by a class. Classifying an object consist of moving from one node to another according to the node's test. Once the image reaches a leaf, its class is associated to the image.
+	Decision tree (\cite{decisiontrees}) is a good example of classification algorithm. More accurately, the decision tree is the model produced and the learning algorithm is the growing procedure. The decision tree is a binary tree where each interior node represent a dichotomic choice regarding one regular feature and each leaf is labeled by a class. Classifying an object consist of moving from one node to another according to the nodes' tests. Once the image reaches a leaf, it is labeled by its class.
 	\par
-	Growing a good tree, in the sense of the quality measure, is done in a top-down fashion by a greedy heuristic. We first need to define an impurity measure which indicates how much diversity for the variable $y$ there is in a sample. We start at the root and pick up the dichotomic choice, also called splitting criterion, which accomplishes the maximum expected reduction of impurity. Then the learning sample is split into a left and a right branch according to the test result. We can now develop both nodes recursively up till there is only objects of the same class in a node, making it a leaf. With this mechanism, the resubstition error is null, thus proving that the method minimizes the loss function. However, the generalization can be quite large. That is why other mechanism, such as other stopping criteria, are implemented.
+	Growing a good tree, in the sense of the quality measure, is done in a top-down fashion by a greedy heuristic. We first need to define an impurity measure which indicates how much diversity there is in a sample for the output variable $y$. We start at the root and pick up the dichotomic choice, also called splitting criterion, which accomplishes the maximum expected reduction of impurity. Then the learning sample is split into a left and a right branch according to the test result. We can now develop both nodes recursively up till there is only objects of the same class in a node, making it a leaf. With this mechanism, the resubstition error is null, thus proving that the method minimizes the loss function. However, the generalization can be quite large. That is why other mechanism, such as other stopping criteria, have been designed.
 	\par
-	A widely-used impurity measure is Shannon entropy. In that case, the construction algorithm has a nice interpretation. The reduction of impurity is the information gain. At each node, we choose the test which brings the most information to the classification variable.
+	The most popular impurity measure is Shannon entropy. In that case, the construction algorithm has a nice interpretation. The reduction of impurity is the information gain. At each node, we choose the test which brings the most information to the classification variable.
 \end{leftbar}
 
 \paragraph{}
-The learning algorithm dependence on the learning set is clearer in the regression case, where we have the following bias-variance decomposition : 
+The learning algorithm's dependence on the learning set is clearer in the regression case, where we have the following bias-variance decomposition : 
 \begin{align*}
-	E_{LS} \{ E_{\boldsymbol{x},y} \{ (y - f(\boldsymbol{x})^2)\} \} = &\phantom{+} E_{\boldsymbol{x},y} \{ (y - E_{y|\boldsymbol{x}}\{ y\})^2 \}  \\
+	E_{LS} \{ E_{\boldsymbol{x},y} \{ (y - f(\boldsymbol{x}))^2\} \} = &\phantom{+} E_{\boldsymbol{x},y} \{ (y - E_{y|\boldsymbol{x}}\{ y\})^2 \}  \\
 	                                                                   &+ E_{\boldsymbol{x}} \{ (E_{y|\boldsymbol{x}}\{ y\} - E_{LS}\{f(\boldsymbol{x})\})^2 \}  \\
 																																	   &+ E_{\boldsymbol{x}} \{ (f(\boldsymbol{x}) -  E_{LS}\{f(\boldsymbol{x})\})^2 \}
 \end{align*}
-The first term, characterize the intrinsic difficulty of the regression task. It quantifies the average deviation of the best possible model $E_{y|\boldsymbol{x}}$, the Bayes model, from the ground truth.
+The first term characterizes the intrinsic difficulty of the regression task. It quantifies the average deviation of the best possible model $E_{y|\boldsymbol{x}}$, the Bayes model, from the ground truth.
+\par
 The second term is the expected square bias. It quantifies the average error between the Bayes model and the average model, $E_{LS}\{f(\boldsymbol{x})\}$. 
-The third term is the average variance of the model. It quantifies how much the model varies from one learning set to another. 
+\par
+The third term is the average variance of the model. It quantifies how much the produced model varies from one learning set to another. These concepts are illustrated by figure \ref{fig:BiasVariance}.
+\par
 Although there is no such analytical decomposition for classification, the concepts of Bayes model, bias and model variance still abide as conceptual tools.
+\begin{figure}
+	\centering
+		\includegraphics[width=0.7\textwidth]{images/BiasVariance.png}
+	\caption{\label{fig:BiasVariance}Bias/variance schematic illustration}
+\end{figure}
+
 \paragraph{}
-The space of candidate model $\mathcal{H}$ is composed of elements of varying complexity. For instance, a decision tree complexity is assessed by its number of nodes. A more complex model will fit the learning set better, thus reducing the resubstitution error. However, fitting this set too well will cause overfitting : the algorithm incorporate set-specific details. This is reflected by the model variance term of the learning algorithm error : slight changes in the learning set will produce very different models. The bias decrease will, at first, overcompensate that increase, yielding a better generalization error. The compensation will work up to the point where the average is of the same order of complexity as the Bayes model. From that point on, the bias decrease will slow down while the model variability still increases. Therefore, the generalization error starts to increase, as well.
-The ability to control the complexity is an important characteristic of a learning algorithm. Another way around this problem is to resort to ensemble methods. Among such methods are the averaging methods which combine several models by averaging their predictions. The models are usually drawn from the same candidate space by either using different learning set or introducing some randomization in the learning algorithm, sometimes both. Ensemble methods rely on the averaging to reduce variability and thus can enjoy more complex models. Ensemble of decision trees form classification forests.
+The space of candidate model $\mathcal{H}$ is composed of elements of varying complexity. For instance, a decision tree complexity is assessed by its number of nodes. A more complex model will fit the learning set better, thus reducing the resubstitution error. However, fitting this set too well will cause overfitting : the algorithm incorporate set-specific details. This is reflected by the model variance term of the learning algorithm's error decomposition : slight changes in the learning set will produce very different models. The bias decrease will, at first, overcompensate that increase, yielding a better generalization error. The compensation will work up to the point where the average is of the same order of complexity as the Bayes model. From that point on, the bias decrease will slow down while the model variability continues to increase. Therefore, the generalization error starts to increase as well.
+\par
+The ability to control the complexity is an important characteristic of a learning algorithm. Another way around this problem is to resort to \textit{ensemble} techniques. Among such are methods which combine several models by averaging their predictions. The models are usually drawn from the same candidate space by either using different learning set or introducing some randomization in the learning algorithm, sometimes both. Ensemble methods rely on the averaging to reduce variability and thus can enjoy more complex models. Ensemble of decision trees form classification forests.
 \paragraph{}
 A learning algorithm is usually dependent of some parameters, which influence the optimization strategy. They are called hyper-parameters so as not to confuse them with the other parameters on which the optimization is performed.
 
 \section{Image classification}
 Traditional learning algorithms are not able to works with ``structured data'' such as texts, images and graphs. Indeed, they expect the individual features to be scalar. Image classification is therefore much more about bridging the two realities than about developing brand new learning algorithm. We will now review the main such techniques.
 
-\chapter{Objectives}
+\paragraph{}
+A first way of approaching image classification would be to define descriptors and build a set a rules, in one form or another, so as to discriminate accordingly the images on basis of those descriptors. A first step toward supervised learning is to delegates the construction of the set of rules to a learning algorithm. This had already been successfully attempted back in the 80s (\cite{earlyDecisionTree}, for instance). Since these first incursions of supervised learning in the domain, the interest for them and their achievements have not stopped growing. 
+\par
+A major concern of the field is dedicated to the image descriptors. Be they structure, spatial, spectral, color or texture descriptors, they actually are the part which bridges the image classification with the supervised learning framework. Moreover, the classification task is only as good as the descriptors allow. The extent to which defining the descriptors must be included in the learning process is still an open debate today. 
+\par
+On the one hand, learning the descriptors allows for a fully generic approach. In this case, the descriptors and rules are usually learned together by the learning algorithm. This can be done by supplying the image in the coarsest acceptable form to the learning algorithm. This is usually done by vectorizing the image in some fashion, in row prime order for instance, so that feature vectors are composed of the raw pixels. This representation is not lossless, however, as some of the spatial structure is lost in the process. Even resorting to better spatial indexation scheme, such as Hilbert or Peano curves, does not help ; the problem lies in the learning algorithm which have not been designed to incorporate directly spatial relationships. Not all this information is lost, though, but rather presents itself in the form of correlations instead of spatial autocorrelations. Whether or not this can be exploited is algorithm-dependent. From now on, we will designate this approach by ``raw-pixels''.
+\par
+On the other hand, we find custom descriptors, which are derived from the images. Such descriptors have two advantages compare to the previous ones. Firstly, they are usually less numerous, meaning that the problem is cast to a lesser dimensional space. These are usually easier and more efficiently solved. The second advantage is that they can focus on relevant information regarding the classification task. This last characteristic hides the main drawback of this scheme : information fed to the learning is biased and can miss some important information. So as to limit these side effects and keep some generality, the descriptor can stay at a reasonable level of abstraction. Example of this is using an histogram as descriptor (\cite{histoIntersectSVM}). Concerning the spatial structure, it is \textit{de facto} lost but can be purposefully reintegrated in the form of dedicated descriptors (see for example \cite{geostat}). From now on, we will designate this approach by ``custom descriptors''.
+
+\paragraph{}
+In the three decades of investigation, the scientific community has been prolific on the topic. Therefore, we will focus on several interesting techniques instead of making a detailed tour of the subject.
+Three such methods, relating to the present work, will be inspected : Pixit, bag of visual words and convolutional network.
+
+\subsection{\label{subsec:Pixit}Pixit}
+This raw-pixels classification scheme was introduce in \cite{pixit}. Pixit consists on extracting patches from the original images to build a second database with more objects. The subwindows can either have a predefined, fixed size or can be drawn randomly, possibly within a range of predefined sizes. In the latter case, the patches must be rescaled to a fix size before being described by their raw pixel values so as to form a coherent learning matrix. It is possible to apply other transformation to the subwindows so as to introduce invariances in the learning set, for example towards rotations (\cite{recapPixit}). In case of multicolor images, the method offers to work either in the RGB or HVS color space. 
+Once computed, the learning matrix can be fed to any classifier, yielding one class per subwindow. Attributing the final class to the original images is done by voting over their subwindows.
+\par
+Depending on the patches' size and the number of colors, the feature vectors can be long. Such high dimensionality is not easy to cope with for all the learning algorithm. That is why they envision a tight coupling between the subwindow extraction and a tree-based classifier. On the one hand, enlarging the data in this fashion allows to build more complex models require to cope with the high dimensionality imposed by the raw pixel representation. On the other hand, decision tree and classification forest do not suffer as much from long feature vectors as other might. This is especially true regarding the computational learning cost of their choice of classification forest, namely extremely randomized trees.
+\begin{leftbar}
+	\paragraph{Ensemble of extremely randomized trees (ExtraTrees)}
+	\paragraph{}
+	They were introduce in \cite{extratrees} and resemble random forest (\cite{randomforests}). In both kind of forests, only a subset of the features are examined at each node to determine the splitting criterion. This approach is called local random subspace and was introduced in \cite{randomsubspace}. 
+	\par
+	They differ in the following way : while random forests use bagging as an extra mechanism to introduce randomness, the ExtraTrees determine the splitting thresholds randomly. Bagging, for bootstrap aggregating, is the fact of drawing with replacement several learning samples from the original one (boostrap) and combining their predictions (aggregating). 
+	\par
+	The advantage of ExtraTrees over random forests is threefold. Firstly, the bagging introduces an effective reduction of the learning size of 36\% for each tree. This is not the case of the ExtraTrees, where all trees can learn from the whole learning sample. Secondly, they are much faster to build since we do not need to pick the optimal splitting thresholds of all the variables examined in a node. Lastly, they tend to perform better than their counterpart (\cite{extratrees}).
+\end{leftbar}
+The method has been extensively studied in the domain of image classification (\cite{base}). It can go beyond this field, though. In \cite{PixitImgRetrieval}, they venture in the field of image retrieval by developing a similarity measure thanks to both the subwindows and the ExtraTrees. In \cite{PixitLabeling}, they turned to image annotation, \textit{i.e.} pixel-wise labeling. By examining the correctly classified subwindows, it is possible to visualize region of interests and thus get insight about the classification task.
+
+
+
+\subsection{Bag of visual words}
+%Bridge back and forth : ECR and zebra-fish
+Bag of words takes its root in text classification. Formally, a bag, or multiset, is a pair $(S, n)$, where $S$ is a set and $n : S \rightarrow \mathbb{N}_0^+$ is a numbering function. As texts are structured objects, like images, they also need descriptors. A common practice is to represent them by an histogram over the words they contain ; a bag-of-word descriptor.
+\par
+The same principle can be applied in image classification, leading to custom descriptors. The main difficulty lies in the fact that the set of so-called ``visual words'', \texit{i.e.} the dictionary is not known in advance, or for that matter, well defined. 
+%Interest point <-> Vector quantization \cite{BagOfWords} + link with subwindows <-> interest points 
+%Link with pixit \cite{ETFL} + SVM
+
+\subsection{Convolutional network}
+%Box neural network \cite{ConvNet} <-- zip code
+
+\paragraph{}
+%Missing link
+%Cite other stuff
+
+
+%==========================================================================================================================================
+\chapter{Objectives and methodology}
+In this brief chapter, we lay down our objectives, methodology and contributions.
+
+\section{Objectives}
 The hypothesis at the core of the present master thesis can be stated as follows : 
 \begin{quote}
 It is possible to combine the advantages of the classification forests, namely computational cost, feature importance evaluation and ease of use, with those of convolutional networks, primarily the accuracy.
 \end{quote}
 \paragraph{}
 %TODO : Come back to the computational cost and see how long it takes for the winners
-The feature importance evaluation capability is one of the nicest features of the classification forests. The importance of a given feature is computed as the total reduction of impurity brought by that feature, normalize so that the feature importances sum to one. The most notable use of this measure is feature selection. 
+The feature importance evaluation capability is one of the nicest features of the classification forests. The importance of a given feature is computed as the total reduction of impurity brought by that feature, normalize so that the feature importances sum to one. The most notable use of this measure is for feature selection. Focusing on a smaller set of features is computationally more tractable, can provide better accuracy when the other features are irrelevant and can bring more insight to the classification problem.
 \par
-The ease of use of the forests is particularly obvious in comparison of the neural networks. With the former, the number of hyper-parameters is quite small and well understood. Therefore, tuning the method is easy and can, usually, be undertaken manually with good results. On the other hand, neural networks tuning is much more complex, as even the structure has to be adapted for each problem. Evidence of this complexity is the amount of work dedicated to this subject in the literature. %Ref Geurts et opti
+The ease of use of the forests is particularly obvious in comparison with the neural networks, for instance. With the former, the number of hyper-parameters is quite small and well understood. Therefore, tuning the method is easy and can, usually, be undertaken manually with good results. Besides, the default parameters usually performs well enough. On the other hand, neural networks tuning is much more complex, as even the structure has to be adapted for each problem. Evidence of this complexity is the amount of work dedicated to this subject in the literature. %Ref Geurts et opti
 \par
 %Convolutional network accuracy is state of the art, blabla \par
-Lastly, let us mention an interesting characteristic of convolutional networks we did not pursue but which has a important impact on scalability : online learning. Indeed, classification forests require to have the total amount of data right away which will be a limitation of our method.
-\paragraph{}
-Validating this hypothesis constitutes our main objective. To achieve this, we developed a method based on classification forests which incorporates some convolutional networks mechanics. More specifically, random linear filters are applied to the image database, followed by one or several spatial poolings. Then, several random subwindows are extracted from each transformed image. Each subwindow is described by the row pixel values.
-The in-depth description of this ``RandConv'' method is the main subject of chapter \ref{chap:methodo}.
-	This method builds on previous works. The idea of applying predefined convolutional filters followed by several spatial poolings before extracting subwindows has already been done in \cite{}. It constituted a generalization of their generic image classification scheme. %TODO introduce ``Pixit'' and cite them
-	The contribution of the current paper is two fold. 
-	Firstly, the RandConv framework proposes several extensions of that method, the most noticeable of which being the ability to generate the filters. This approach resembles much more the convolution networks', where the filters are actually learned.
-	Secondly, whereas the aforementioned work was more like a proof of concept, the present study aim at analyzing more deeply this method. Indeed, proving the hypothesis is not our only goal. We also want to study closely the behavior of our classification method so as to understand its strength and limitations.
+Lastly, let us mention an interesting characteristic of convolutional networks we did not pursue but which has an important impact on scalability : online learning. Indeed, classification forests require to have the total amount of data right away which may be a limitation of our method.
 
-\chapter{Methodology}
-\label{chap:methodo}
-\paragraph{}
-This chapter is divided into three sections. The first one aims at fully describing our classification method. The second section details the experimental condition in which our method will be evaluated. Finally, the last one highlights implementation details and technical issues.
-	\section{The RandConv framework}
-	\paragraph{}
-	This section is dedicated to an in-depth description of our classification method : RandConv. It stands for ``Random and 	convolutional''. The ``random'' part refer to both the filter generation and subwindow extraction. While the ``convolutional'' adjective refers to the application of the linear filters. 
-	\paragraph{}
-	So as to bridge between classification forests and convolutional networks, we started from the former and added characteristics of the latter. Those characteristics are the convolutional filtering followed by spatial pooling.
-	The RandConv method is divided into the following parts :
+
+\section{Methodology}
+\subsection{The RandConv algorithm}
+Validating the hypothesis constitutes our main objective. To achieve this, we developed a method named RandConv based on classification forests which incorporates some convolutional networks mechanics. More specifically, random linear filters are applied to the image database, followed by one or several spatial pooling(s). Then, several random subwindows are extracted from each processed image. Each subwindow is described by the raw pixel values. The method is thus divided into the following parts :
 	
 	\begin{enumerate}
 		\item Generating the $N$ linear filters
@@ -332,27 +380,55 @@ This chapter is divided into three sections. The first one aims at fully describ
 	\end{algorithm}
 	
 	
+The in-depth description of this RandConv method is the main subject of chapter \ref{chap:RandConv}.
+	This method builds on previous works. The idea of applying predefined convolutional filters followed by several spatial poolings before extracting subwindows has already been done in \cite{base}. It constituted a generalization of their generic image classification scheme (\cite{pixit}), called Pixit. 
 	
+	
+	\subsection{Dataset and environment} %TODO : cite GIGA computer
+	%CIFAR-10 : Several important results. 288 Go de ram dont 145 en shm. 30 core. frequency ?
+	We will be working with the CIFAR-10 database (\cite{cifar}). This dataset is composed of a learning set of 50,000 images and a testing set of 10,000 images. They are grouped into 10 mutually exclusive classes : airplane, automobile, bird, cat, deer, dog, frog, horse, ship and truck. Both subsets contain an equal number of images from each class. The images are of size 32x32 and are RGB.
+	\par
+	This database has been chosen because it was the same one on which the precursory method from \cite{base} was tested. In turn, they chose this dataset because their traditional solution had difficulties with it. 
+	\par
+	The best result on this database is an accuracy of 91.2\% and is hold by a convolutional network (\cite{bestcifar}). The top ten best results are above 80\%. Most are neural network solutions and none are based on classification forests.
 	\paragraph{}
-	Although, the method has been designed with the use of classification forest in mind, the RandConv method, \textit{per se}, is actually a feature extraction method. Its goal is to transform a set of images into a set of corresponding feature vectors. The actual classification could be carried out by any traditional learning algorithm. Nevertheless, regarding our primary objective and some other attractive properties of the trees, which will be developed in subsection \ref{subsec:methodo-filtergen}, we will stick with classification forests in one way or another.
+	The learning and testing will be carried out on a 64-bits 30-core 2.1 GHz computer with 288 GB of RAM from the Cytomine project (\cite{cytomine}) and GIGA bioinformatic platform.
+	
+	
+	\section{Contribution}
+	The contribution of the current paper is twofold.
+	\par
+	Firstly, the RandConv framework proposes several extensions of the precursory method, the most noticeable of which being the ability to generate the filters randomly. This approach resembles more the convolution networks, where the filters are actually learned.
+	\par
+	Secondly, whereas the aforementioned work was a proof of concept, the present study aims at analyzing more deeply this method. Indeed, proving the hypothesis is not our only goal. We also want to study closely the behavior of our classification method so as to understand its strength and limitations. This is the focus of chapter \ref{chap:results}.
+	\par
+	The present works differs from \cite{NearlySame} in three ways. Firstly, the randomly generated filters are not used in the same fashion. Whereas they use them as a randomization mechanism to introduce variability in the trees, we incorporate them all for each trees of the forest so that the individual trees will \textit{choose} which filter to emphasis. Secondly, we are using a layer of spatial pooling missing in the aforementioned paper and extracts several subwindows instead of working with the whole image directly. Finally, we work at a much bigger scale, providing at least several tens of filters to the forest. 
 
+%==========================================================================================================================================
+\chapter{\label{chap:RandConv}The RandConv framework}
+This chapter is divided into three sections. The first one aims at fully describing our classification method. The second section highlights implementation details and technical issues. The last one summarizes the hyper-parameters and fixes their default values.
+
+	\section{RandConv components}
+	This section is dedicated to an in-depth description of our classification method : RandConv. It stands for ``Random and 	convolutional''. The ``random'' part refer to both the filter generation and subwindow extraction. While the ``convolutional'' adjective refers to the application of the linear filters. 
+	\paragraph{}
+	So as to bridge between classification forests and convolutional networks, we started from the former and added characteristics of the latter. Those characteristics are the convolutional filtering followed by spatial pooling.
+	Although, the method has been designed with the use of classification forest in mind, the RandConv method, \textit{per se}, is actually a feature extraction method. Its goal is to transform a set of images into a set of corresponding feature vectors. The actual classification could be carried out by any traditional learning algorithm. Nevertheless, regarding our primary objective and some other attractive properties of the trees, which will be developed shortly, we will stick with classification forests in one way or another.
 
 	
 		\subsection{Filter Generation and application}\label{subsec:methodo-filtergen}
 		%dimension, square size, odd natural, uniform at first
 		%coefficients
-		\paragraph{}
 		Mimicking the convolutional filtering is carried out by generating random linear, spatially invariant filters. More precisely, we generate the 2D finite impulse response matrices. First, the filter dimensions and then the filter coefficients are randomly drawn. This means that, contrary to the ConvNet, the coefficients are not directly learned. The coefficient learning is simulated by generating a vast number of filters and letting the learning algorithm choose the ones to emphasis. 
-		\paragraph{}
-		This calls for an important remark : decision tree-based solutions are ideal classifier candidates. Firstly, their construction technique allow them to emphasis easily the interesting filters. Secondly, they deal well enough with numerous, possibly irrelevant, features. Indeed, the major impact is a reduction of the model effective complexity. The resulting accuracy drop is much less tremendous than with some other classifiers. Besides, this reduction of complexity can be balanced by the number of subwindows extracted from each image. Augmenting the dataset produces deeper trees ; more complex model. Lastly, they scale well enough due to their relatively low computational cost, especially the extremely randomized tree variant.
+		\par
+		This calls for an important remark : decision-tree-based solutions are ideal classifier candidates. Firstly, their construction technique allow them to emphasis easily the interesting filters. Secondly, they deal well enough with numerous, possibly irrelevant, features. Indeed, the major impact is a reduction of the model effective complexity. The resulting accuracy drop is much less tremendous than with some other classifiers. Besides, this reduction of complexity can be balanced by the number of subwindows extracted from each image. Augmenting the dataset produces deeper trees ; more complex model. Lastly, they scale well enough due to their relatively low computational cost, especially the extremely randomized tree variant.
 		
 			
 			
 			\subsubsection{Drawing mechanism}
-			How to draw the filters is one of the RandConv framework cornerstone. The drawing mechanism should meet two prerequisites. Firstly, it should be able to produce unlimited, or at the least great, number of different filters. Secondly, the filters should be of some value by themselves but also together. Intuitively, a valuable filter should highlight ``information'' not directly accessible from the original image by the learning algorithm. We will call this characteristic the individual usefulness or simply usefulness. As for having value together, two different filters should not uncover the exact same ``information''. For instance, producing twice the same filter is useless. We will call this the group usefulness or co-usefulness.
+			How to draw the filters is one of the RandConv framework cornerstone. The drawing mechanism should meet two requirements. Firstly, it should be able to produce unlimited, or at the least, a great number of different filters. Secondly, the filters should be of some value by themselves but also together. Intuitively, a valuable filter should highlight ``information'' not directly accessible from the original image by the learning algorithm. We will call this characteristic the individual usefulness or simply usefulness. As for having value together, two different filters should not uncover the exact same ``information''. For instance, producing twice the same filter is useless. We will call this the group usefulness or co-usefulness.
 			
 			\paragraph{}
-			Several drawing mechanisms have been developed with different characteristics in mind :
+			Several drawing mechanisms have been developed with different motivation in mind :
 			
 			\begin{itemize}
 				\item Custom filters
@@ -363,18 +439,21 @@ This chapter is divided into three sections. The first one aims at fully describ
 				\item Stratified perturbed generator
 			\end{itemize}
 			
-			The first one is a special case. It consists of a set of 38 well known filter, among which the Sobel and Prewitt filters, several Laplacian filters of different sizes, the compass gradient filters, some low and high pass filters and other line detection filters.
+			The first one is a special case. It consists of a set of 38 well known filters, among which the Sobel and Prewitt filters, several Laplacian filters of different sizes, the compass gradient filters, some low and high pass filters and other line detection filters.
 			%\begin{multicols}{3}
 			%\end{multicols}
-			Being a small set, it violates the first prerequisite. However, this pseudo filter generator will be useful as a comparison basis : the filter are the same ones as in \cite{}. Besides, these filters have practical application cases which random filters might not share. It is thus a reference point to see whether the generated filters highlight interesting ``information''.
+			Being a small set, it violates the first prerequisite. However, this pseudo filter generator will be useful as a comparison basis : the filter are the same ones as in \cite{base}. Besides, these filters have practical application cases which random filters might not share. It is thus a reference point to see whether the generated filters highlight interesting ``information''.
 			\paragraph{}
-			The other mechanism draw randomly the filters. Before generating the coefficients of a filter, its dimensions must first be determined. The widths and heights of the impulse response matrices are drawn from an bounded set of odd, positive integers. Although we limited our tests to square matrices, this is not a strict requirement.
+			The other mechanism draw the filters randomly. Before generating the coefficients of a filter, its dimensions must first be determined. The widths and heights of the impulse response matrices are drawn from an bounded set of odd, positive integers. Although we limited our tests to square matrices, this is not a strict requirement.
+			\par
 			We mainly worked with a uniform distribution of sizes, playing somewhat with the set bounds. Once again, this is not a limitation as other distribution can easily be used. For example, it is possible to create a distribution biasing towards small sizes. 
-			As for the bounds, a minimum seems to be 3. The maximum size should not be greater than twice the image size but needs probably not be greater than half this size. Indeed, greater filters might incorporate mostly non-local information.
+			\par
+			As for the bounds, the minimum was fixed to 3. The maximum size needs probably not be greater than half the image size. Indeed, greater filters might incorporate mostly global information and provides too much redundancy.
+			\par
 			Conceptually, for a given maximum size, say $n = h \times w$, it is easy to build a bijection between the filter matrices space and $\mathbb{R}^n$. This representation will help us visualize the drawing mechanisms.
 			\paragraph{Discrete law generator.}
 			Once the size is fixed, every coefficient is drawn for a predefined discrete law. Even though the number of such filters is bounded for a given maximum size, this filter space is still vast enough so as to meet the first generator prerequisite. We tested the following law : -1 with a probability of .3, 0 with a probability of .4 and 1 with a probability of .3.
-			This generator was motivated by the spatial interpretation of the convolution. It accounts for summing and subtracting neighboring pixel together.
+			This generator was motivated by the spatial interpretation of the convolution. It accounts to summing and subtracting neighboring pixel together.
 			\paragraph{Zero-perturbation generator.}
 			Once the size is fixed, every coefficients are drawn from the same continuous probability law. Although there is no restriction on the probability law, we expect it to be symmetrical and zero-centered, hence the generator name. We used two such laws. The first one is the uniform law over reals bounded with -1 and 1. In this respect, the generator space is mappable to an hypercube centered on the origin. The second law was a Gaussian so that the probability of being outside the range [-1, 1] is equal to a given threshold. The isoprobabilities thus form hyperspheres. The points lying outside of the range can be forced to the boundary so that the generator space becomes the same hypercube as with the uniform law. 
 			Zero-centered generator were motivated by the examination of common filters which portray the same characteristic.
@@ -382,7 +461,7 @@ This chapter is divided into three sections. The first one aims at fully describ
 			Identity-perturbation generator work in the same fashion as its zero-perturbation counterpart. The only difference is that the hyper-structures are centered around the identity filter instead of the origin. 
 			The motivation behind this generator was to produce filtered images resembling the original while being different enough so as to be of value.
 			\paragraph{Maximum-distance-from-identity generator.} 
-			This kind of generators fulfills the same purpose as the previous one. The generator space is also centered on the identity filter but its shape is different since we decided to work with the Manhattan distance. Concretely, the generator is parametrized by a maximum distance, independent of the filter sizes. The coefficients are processed in a random order. A random perturbation from the range [-maximum distance, maximum distance], expectedly from a uniform distribution, is applied to the first coefficient. Before processing the next coefficient, the maximum distance is updated by subtracting the absolute value of the perturbation.
+			This kind of generators fulfills the same purpose as the previous one. The generator space is also centered on the identity filter but its shape is different. We decided to work with the Manhattan distance. Concretely, the generator is parametrized by a maximum distance, independent of the filter sizes. The coefficients are processed in a random order. A random perturbation from the range $[-maxDist, maxDist]$ is applied to the first coefficient. Before processing the next coefficient, the maximum distance is updated by subtracting the absolute value of the perturbation.
 			\paragraph{Stratified perturbed generator}
 			This last class of generators are parametrized by a minimum value $m$, a maximum value $M$ and a subdivision number $n$. For each coefficient, a value $v$ from the set $\{m + \frac{k+1}{2} \times \frac{(M-m)}{n} | k \in \mathbb{Z}, k < n\}$ is chosen randomly.  This value is then randomly perturbed before being assigned to the coefficient. The perturbation is not mandatory and should stay in the range [$-\frac{(M-m)}{2n}, \frac{(M-m)}{2n}$]. Expected perturbation law are Gaussian and uniform. This is illustrated by figure \ref{fig:stratgen}
 			\begin{figure}
@@ -392,7 +471,7 @@ This chapter is divided into three sections. The first one aims at fully describ
 			\end{figure}
 			
 			\par
-			This generator class was motivated by the idea to produce as dissimilar filters as possible so as to meet our second requirement about co-usefulness. Disregarding the perturbation, the filter space is finite but still huge. For instance, the space for a subdivision number of 10 with only the smallest filters (3x3) would still mean $10^9$ filters.  Whereas, $2^9$ filters, \textit{i.e.} a subdivision number of 2, is manageable, the other generators are able to produce filters as dissimilar. Furthermore, the following non-monotonicity property suggests that a dissimilar approach in the filter space might not be the best way to produce sets of co-useful filters. Indeed, we can use the distance to measure co-usefulness : if two filtered image are close, they probably highlight the same ``information''.
+			This generator class was motivated by the idea to produce as dissimilar filters as possible so as to meet our second requirement about co-usefulness. Disregarding the perturbation, the filter space is finite but still huge. For instance, the space for a subdivision number of 10 with only the smallest filters (3x3) would still mean $10^9$ filters.  Whereas $2^9$ filters, \textit{i.e.} a subdivision number of 2, is manageable, the other generators are able to produce filters as dissimilar. Furthermore, the following non-monotonicity property suggests that a dissimilar approach in the filter space might not be the best way to produce sets of co-useful filters. Indeed, one way of assessing co-usefulness is to use a distance measure : if two filtered images are close, they probably highlight the same ``information''.
 			
 			\paragraph{Non-monotonicity property.}
 			We will show that closeness in the filter space does not necessarily imply closeness of the filtering results. Closeness is to be understood as distance from a reference.
@@ -412,7 +491,7 @@ This chapter is divided into three sections. The first one aims at fully describ
 			In these terms, we have to show that $\parallel e_1 \parallel \geq \parallel e_2 \parallel \centernot\implies \parallel I * e_1 \parallel \geq \parallel I * e_2 \parallel$. 
 			Let us take $e_1$ such that the coefficients sum up to zero but with a great dispersion (a Sobel filter, for example) and $e_2$ such that the sum of the coefficients is strictly greater than zero but with a smaller dispersion than $e_1$ (the 3x3 average filter, for instance). Thus, we have  $\parallel e_1 \parallel \geq \parallel e_2 \parallel$. Moreover, let us consider the case of a image $I$ with constant value $c > 0$. In this setting, $\parallel I * e_1 \parallel = 0$ while $\parallel I * e_2 \parallel = c \times k > \parallel I * e_1 \parallel$.
 			\par
-			Therefore, playing with closeness or dissimilarities in the filter space yield no warranty about the same metrics with the filtered images. However, using the distance as measure of co-usefulness is arguably a poor choice, since close images might still highlight different aspects of the images. Considering this remark, the main shortcoming of the stratified generator is probably that, with respect to the number of generated filters we will use, it  does not produce any significant advantage over other generators.
+			Therefore, playing with closeness or dissimilarities in the filter space yield no warranty about the same metrics with the filtered images. However, using the distance as measure of co-usefulness is arguably a poor choice, since close filtered imagess might still highlight different aspects of the original image. Considering this remark, the main shortcoming of the stratified generator is probably that, with respect to the number of generated filters we will use, it  does not produce any significant advantage over other generators.
 			
 			
 
@@ -423,15 +502,17 @@ This chapter is divided into three sections. The first one aims at fully describ
 			
 			\begin{itemize}
 				\item No normalization : the post-processing normalization is skipped.
-				\item Zero mean : the mean value of the filter coefficients is null.
-				\item Unit variance : the coefficients have a unit variance.
+				\item Zero mean : the coefficient values are normalized so that their mean value is null.
+				\item Unit variance : the coefficient values are normalized so as to have a unit variance.
 				\item Zero mean and unit variance : both the previous. First the zero mean then the unit variance.
-				\item Unit sum : the coefficients sum to one.
+				\item Unit sum : the coefficients are normalized to sum to one.
 			\end{itemize}
 			
 			The introduction of the zero mean and unit variance normalizations was primarily motivated by supplying support for learning algorithms other than classification forests. Indeed, their effect is to impose a common dynamics to all the filters. While trees can cope easily with variables of different dynamics, some classification schemes are not applicable is that setting or suffer greatly from it.
-			As for the unit sum normalization, applied in conjunction with a generator producing positive coefficients, it produces ``convex combination filters'' in the following sense : for each step of the convolution, the output pixel value is a convex combination of the minimum and maximum of the neighboring original pixels (where the neighborhood is defined by the filter size).
-			We will now look at the implication of the normalizations on the generator space and the filtering in both the spacial and frequency spaces. We will reuse the filter representation in $\mathbb{R}^n$ and will denote by $\textbf{1}$ the vector whose coefficients are all $1$.
+			\par
+			As for the unit sum normalization, applied in conjunction with a generator producing positive coefficients, it produces ``convex combination filters'' in the following sense : for each step of the convolution, the output pixel value is bounded by the minimum and maximum of the neighboring original pixels (where the neighborhood is defined by the filter size).
+			\par
+			We will now look at the implication of the normalizations on the generator space. We will reuse the filter representation in $\mathbb{R}^n$ and will denote by $\textbf{1}$ the vector whose coefficients are all $1$.
 			
 			\paragraph{Zero mean normalization.}
 			In $\mathbb{R}^n$, the zero mean filters form the hyperplane $\{x \in \mathbb{R}^n | \textbf{1}^{T}x = 0\}$. The normalization is a projection onto that hyperplane. The resulting filter $y$ is computed as $y = x - \frac{1}{n}\textbf{1}^{T}x\textbf{1}$. This operation can produce a filter which is outside of the original filter space.
@@ -441,9 +522,9 @@ This chapter is divided into three sections. The first one aims at fully describ
 			\]
 			The $(I * \textbf{1}_f)$ correction part is independent of the filter and proportional to the mean coefficient value. The practical impact is clearer in the frequency space. Let us denote by $\rightleftharpoons_\mathcal{F}$ the Fourier transform : 
 			\begin{align*}
-				I &\rightleftharpoons_\mathcal{F} U
-				x_f &\rightleftharpoons_\mathcal{F} H_x
-				m_f &\rightleftharpoons_\mathcal{F} H_m
+				I &\rightleftharpoons_\mathcal{F} U \\
+				x_f &\rightleftharpoons_\mathcal{F} H_x \\
+				m_f &\rightleftharpoons_\mathcal{F} H_m \\
 				y_f &\rightleftharpoons_\mathcal{F} H_y = H_x - H_m
 			\end{align*}
 			\[
@@ -453,7 +534,7 @@ This chapter is divided into three sections. The first one aims at fully describ
 			Therefore, the normalization does not restrict the class of filters.
 			
 			\paragraph{Unit variance normalization.}
-			In $\mathbb{R}^n$, the unit variance filters form the hypersphere $\{x \in \mathbb{R}^n | x^{T}x = 1\}$. However, in practice, the normalization works with the current filter size and not the maximum filter size. Thus, there are several hyperspheres to consider, one per possible size. 
+			In $\mathbb{R}^n$, the unit variance filters form the hypersphere $\{x \in \mathbb{R}^n | x^{T}x = 1\}$. However, in practice, the normalization works with the current filter size and not the maximum filter size. Thus, there are several hyperspheres to consider, one per possible sizes. 
 			In the filter space, the normalization equals to scaling the filter so as to meet the appropriate hypersphere. The impact on filtering is immediate :
 			\[
 				I * y_f = I * (\frac{1}{\sigma_x} x_f) = \frac{1}{\sigma_x} (I * x_f)
@@ -470,16 +551,18 @@ This chapter is divided into three sections. The first one aims at fully describ
 			Handling colors can be done in three ways. 
 			The first one, is to realize a 3D convolution. This results in a single output value per original pixel. However, there are two drawbacks to this approach. Firstly, in the spatial space, it means combining values of different colors together. This would work but lacks of physical interpretation. Indeed, the RGB space is only a convention. The second drawbacks has to do with the frequency space. It feels awkward to put on a same level spatial frequencies and color frequency, whatever it might mean.
 			\par
-			The second method to handle colors is to use separate 2D filters on each channel. This produces three values per original pixels. As for the last and simplest method, is to use the same 2D filters on each color. This also produces three values per original pixels.
-			Because the last approach seems more natural than the first one and is simpler to interpret, it is the one we adopted.
+			The second method to handle colors is to use separate 2D filters on each channel. This produces three values per original pixels. The main drawback of this scheme is that post interpretation of the filters will be difficult.
+			\par
+			As for the last and simplest method, is to use the same 2D filters on each color. This also produces three values per original pixels.
+			Because the last approach seems more natural than the first one and is simpler to interpret than the second, it is the one we adopted.
 			\paragraph{}
 			Now that we know how to handle colors, let us investigate the filter application.
 			The convolution is carried out in the frequency space by multiplying the Fourier transform of the original image by the transfer function of the filter. The output is of the same size as the original image. The borders are handled by padding the original image with zeros.
 			
-		\subsection{Pooling goals and strategies}
-		Now that we have fully covered the filter generation and application mechanisms, we can move on to the next part concerning the spatial pooling.
+		\subsection{Pooling strategies}
+		Now that we have fully covered the filter generation and application mechanisms, we can move on to the next part concerning the spatial pooling strategies. In both cases, we need two elements : a window/neighborhood size and the function to apply on those windows.
 			\paragraph{Moving windows.}
-			In the case of spatial pooling by moving windows, two elements are needed : the moving window size and the pooling function. Windows are supposed to have odd width and height. The center of the window moves to match every pixel of image. The pooling function is computed on the overlapping part of the window and the image. The resulting image as the same size as the original image. This is illustrated by figure \ref{fig:PoolMW}
+			In the case of spatial pooling by moving windows, they are supposed to have odd width and height. The center of the window moves to match every pixel of image. The pooling function is computed on the overlapping part of the window and the image. The resulting image as the same size as the original image. This is illustrated by figure \ref{fig:PoolMW}. 
 	\begin{figure}
 		\centering
 			\includegraphics[width=0.7\textwidth]{images/PoolMW.png}
@@ -487,7 +570,7 @@ This chapter is divided into three sections. The first one aims at fully describ
 	\end{figure}
 			
 			\paragraph{Aggregations.}
-			In the case of spatial pooling by aggregation, the neighborhood windows do not overlap. The image is divided into several non overlapping neighborhood such that each neighborhood has the appropriate size. The pooling function is then applied on each cell of this neighborhood grid. Thus, contrary to moving windows, the resulting image is smaller and correspond to the neighborhood grid layout. This is illustrated by figure \ref{fig:PoolAgg}
+			In the case of spatial pooling by aggregation, the neighborhood windows do not overlap. The image is divided into several non overlapping neighborhood such that each neighborhood has the appropriate size. The pooling function is then applied on each cell of this neighborhood grid. Thus, contrary to moving windows, the resulting image is smaller and correspond to the neighborhood grid layout. This is illustrated by figure \ref{fig:PoolAgg}.
 	\begin{figure}
 		\centering
 			\includegraphics[width=0.5\textwidth]{images/PoolAgg.png}
@@ -495,13 +578,10 @@ This chapter is divided into three sections. The first one aims at fully describ
 	\end{figure}
 	
 			\paragraph{Pooling functions.}
-			The pooling function box is comprise of the minimum, maximum and average functions. In the case of the average function with moving window, we are close to defining a composition of two linear filters. The difference comes from the way the border are handled. In the case of the application of the linear filter, the outside element are replaced by zero while they are ignored in the pooling case.
+			The pooling function box is comprise of the minimum, maximum and average functions. In the case of the average function with moving window, we are close to defining a composition of two linear filters. The difference comes from the way the border are handled. In the case of the application of the linear filter, the outside element are replaced by zero while they are ignored in the pooling case. Thus the normalizing factor is not the same in both cases.
 			
 		\subsection{Subwindows extraction}
-		Once the generated filters and the spatial poolings have been applied, it is time to extract subwindows from the images. Extracting subwindows has several advantages. 
-		Firstly, it expands the number of learning objects. Depending on the feature descriptor extraction mechanism, there may be numerous features describing a given image. Using less features but more objects performs usually better. As we mentioned earlier, this is especially true with trees, at least for the ``more objects'' part, where a greater database means a greater tree and therefore a more complex model.
-		Secondly, this approach is more robust towards scaling and occlusions (\cite{pxitrecap}).
-		Lastly, it can be used as a zone of interest detection system, see for example \cite{mareebiological}. This is an computationally interesting and domain-free alternative to other techniques. Although this is not the focus of the present work, the RandConv method retains this capability as well.
+		Once the generated filters and the spatial poolings have been applied, it is time to extract subwindows from the images. The advantages of using subwindows have already been exposed in subsection \ref{subsec:Pixit} describing the Pixit method.
 		While expanding the number of learning objects, we also need to to expand the class label accordingly. Consequently, each subwindows will be described by the label of its original image.
 		
 		\paragraph{}
@@ -514,16 +594,26 @@ This chapter is divided into three sections. The first one aims at fully describ
 		For 32x32 images, this yields 278,784 subwindows !
 		
 		\paragraph{}
-		As we can see, there are numerous subwindows. Nevertheless, not all are of interests. The small size subwindows do not bring much information. For instance, taking only one pixel is not interesting. Delimiting a good threshold on the size is problem dependent, however. Despite focusing on big enough subwindows, there may still be too many of them. For instance, on 32x32 images, there are still 2025 subwindows of sizes ranging from 24x24 to 32x32. Nevertheless, this entails a redundancy level which is not needed.
+		As we can see, there are numerous subwindows. Nevertheless, not all are of interests. The small size subwindows do not bring much information. For instance, taking only one pixel subwindows is not interesting. Delimiting a good threshold on the size is problem dependent, however. Despite focusing on big enough subwindows, there may still be too many of them. For instance, on 32x32 images, there are still 2025 subwindows of sizes ranging from 24x24 to 32x32. This entails a redundancy level which is not needed.
 		Since it would be difficult to establish a general heuristic to choose good candidates, we resort to drawing them randomly. 
-		At this point we have to be careful. Since we want to describe together all, \textit{i.e.} within the same feature vector, the filtered images in a coherent fashion, we need to extract the same subwindows on all the filtered image belonging to the same original one. The filtering and pooling aim is to better describe a subwindow. However, for two different original images, we may choose two different sets of subwindows.
-		By hypothesis, the chance of drawing twice the same subwindow for a given original image is small.
+		\par
+		At this point we have to be careful. Since we want to describe together all, \textit{i.e.} within the same feature vector, the filtered images in a coherent fashion, we need to extract the same subwindows on all the filtered images belonging to the same original one. The filtering and pooling aim is to better describe a subwindow. However, for two different original images, we may choose two different sets of subwindows.
+		The chance of drawing twice the same subwindow for a given original image is small.
 		We start by drawing the size uniformly in the affordable range. Then the upper left position of the subwindow is drawn from the possible position considering the subwindow size.
 		
 		\paragraph{}
-		Since the subwindows are chosen uniformly, we can compute the probability of a given pixel belonging to a subwindow by counting the number of subwindows containing that pixel and dividing it by the total number of subwindows. Once again, we will use the fact that we can factorize the numbering for each axis. We will proceed by recurrence. Let us take a column of height $H$ and index the element starting at 1 for the top element and ending at $H$ for the bottom one. We will denote by $T(i)$ the number of subwindows encompassing the ith element. It is immediate that $T(1) = H$ : only one subwindow of each length can contain the first element. By symmetry this is also the case for the last element : $T(H) = H$. The second element is encompassed by all the subwindows of the first one but for the one-pixel subwindow. Besides this, we have to add the $H-1$ subwindows starting at this element. Therefore, $T(2) = T(1) - 1 + (H -1)$. The reasoning is similar for the next one, the only difference being that now we have to subtract two previous windows from $T(2)$ : the monopixel one starting at element 2 and the bipixel one starting at element 1 (its monopixel has already been removed). Thus, $T(3) = T(2) - 2 + (H - 2)$. Expanding the reasoning we get the general formula $T(n) = T(n-1) - (n-1) + H - (n-1) = T(n-1) + H - 2(n-1)$. Resolving the recurrence yields $T(n) = nH - n(n+1) + 2n = nH -n^2 + n$, which verifies $T(1) = T(H) = H$. We just need to pay attention to the fact that we have started numbering at 1, which is not the convention.
+		Since the subwindows are chosen uniformly, we can compute the probability of a given pixel belonging to a subwindow by counting the number of subwindows containing that pixel and dividing it by the total number of subwindows. Once again, we will use the fact that we can factorize the numbering for each axis and will proceed by recurrence. 
+		\par
+		Let us take a column of height $H$ and index the element starting at 1 for the top element and ending at $H$ for the bottom one. We will denote by $T(i)$ the number of subwindows encompassing the ith element. It is immediate that $T(1) = H$ : only one subwindow of each length can contain the first element. By symmetry this is also the case for the last element : $T(H) = H$. 
+		\par
+		The second element is encompassed by all the subwindows of the first one but for the one-pixel subwindow. Besides this, we have to add the $H-1$ subwindows starting at this element. Therefore, $T(2) = T(1) - 1 + (H -1)$. 
+		\par
+		The reasoning is similar for the next one, the only difference being that now we have to subtract two previous windows from $T(2)$ : the monopixel one starting at element 2 and the bipixel one starting at element 1 (its monopixel has already been removed). Thus, $T(3) = T(2) - 2 + (H - 2)$. 
+		\par
+		Expanding the reasoning we get the general formula $T(n) = T(n-1) - (n-1) + H - (n-1) = T(n-1) + H - 2(n-1)$. Resolving the recurrence yields $T(n) = nH - n(n+1) + 2n = nH -n^2 + n$, which verifies $T(1) = T(H) = H$. We just need to pay attention to the fact that we have started numbering at 1, which is not the convention.
+		\par
 		Coming back to the 2D case, we have that the number of subwindows encompassing a pixel $(r+1,c+1)$ is $T(r,c) = (rH - r^2 + r) \times (cW - c^2 + c)$.
-		Figure \ref{fig:probpixel} shows the probability associated to each pixel of being picked up.
+		Figure \ref{fig:probpixel} shows the probability associated to each pixel of being picked up. As we can see, this scheme of extraction tends to favor the center of the image.
 		
 	\begin{figure}
 		\centering
@@ -532,23 +622,31 @@ This chapter is divided into three sections. The first one aims at fully describ
 	\end{figure}
 		
 		\paragraph{}
-		Although the subwindows can have different sizes, the feature vector describing a particular subwindows cannot. More specifically, a column of the learning matrix must correspond to a well identified variable. Thus, we need to rescale all the subwindows to a common size. Ideally, the size should be chosen so as to minimize the re-interpolation error. The interpolation algorithms are nearest neighbor, bilinear and bicubic. We will focus on the nearest neighbor because it is faster and it was found to be comparable in term of classification accuracy to the others in most cases (\cite{base}).
+		Although the subwindows can have different sizes, the feature vector describing a particular one cannot. More specifically, a column of the learning matrix must correspond to a well identified variable. Thus, we need to rescale all the subwindows to a common size. Ideally, the size should be chosen so as to minimize the re-interpolation deformation. The interpolation algorithms provided are nearest neighbor, bilinear and bicubic. We will focus on the nearest neighbor because it is faster and it was found to be comparable in term of classification accuracy to the others in most cases (\cite{base}).
 		
 		\subsection{Feature descriptions}		
-		Starting from the original database of $M$ images, a set of $N$ filters and $P$ spatial poolings, we produced $N \times P$ images for each original ones. From each of those $M$ sets, we extracted $S$ subwindows on each of the $N \times P$ filter images. We now have $M \times S$ learning objects described by $N \times P$ complex structures. We will describe each structure by a feature vector and concatenate all the feature vectors corresponding to the same subwindow.
-		\paragraph{}
-		Each filtered and spatially pooled image will be described by its raw pixels in a last-dimension-first fashion. Therefore, we start by the color dimension and group the three color values of the top left pixel together. Then we append the second pixel (top row, second pixel from the left) and so on for all pixels of the first row. After that, we append the second line in the same fashion and so on for all the image. This is resumed by figure \ref{fig:imgDesc}.
-		Thus, there are $3(h \times w) \times (N \times P)$ features per subwindows. For instance, 100 filters with 1 pooling on 16x16 subwindows yields feature vector of $3(16 \times 16) \times 100 = 76,800$ variables.
+		Each filtered and spatially pooled image will be described by its raw pixels in a last-dimension-first fashion. Therefore, we start by the color dimension and group the three color values of the top left pixel together. Then we append the second pixel (top row, second pixel from the left) and so on for all pixels of the first row. After that, we append the second line in the same fashion and so on for all the image. This is resumed by figure \ref{fig:imgDesc}, which also shows that the feature vectors belonging to the same subwindows are concatenated.
+		Thus, there are $3(h \times w) \times (N \times P)$ features per subwindows. For instance, 100 filters with 1 pooling on 16x16 subwindows yields feature vectors of $3(16 \times 16) \times 100 = 76,800$ variables.
 		
 	\begin{figure}
 		\centering
 			\includegraphics[width=1.0\textwidth]{images/imgDesc.png}
 		\caption{\label{fig:imgDesc}Filtered and spatially pooled image description}
 	\end{figure}
+	
+	\paragraph{}
+	Once all the subwindows have been described in this fashion, we need to assemble each piece to form the actual learning matrix.
+	Starting from the original database of $M$ images, a set of $N$ filters and $P$ spatial poolings, we produced $N \times P$ images for each original ones. From each of those $M$ sets, we extracted $S$ subwindows on each of the $N \times P$ filtered and pooled images. We now have $M \times S$ learning objects described by $N \times P$ feature vectors. As we mentioned earlier, we will concatenate all the feature vectors corresponding to the same subwindow. This is depicted by figure \ref{fig:LearningMatrix}.
+	
+	\begin{figure}
+		\centering
+			\includegraphics[width=1.0\textwidth]{images/LearningMatrix.png}
+		\caption{\label{fig:LearningMatrix}Layout of the final learning matrix}
+	\end{figure}	
 		
 		\subsection{Compression layer}
-		An additional so-called compression layer was envisioned for two reasons. Its goal is to reduce the number of features require to describe a subwindow. The first reason was to limit memory usage and the second one was to reduce the relative number of features associated to a given filter compare to the original image so as to put more emphasis on it.
-		Two mechanisms were implemented. The first one is an additional layer in the feature descriptions part and only of subsets of the  feature vectors. The second compression layer is situated after the traditional RandConv and works on the whole learning matrix.
+		An additional so-called compression layer was envisioned for two reasons. It works by reducing the number of features require to describe a subwindow. The first reason was to limit memory usage and the second one was to reduce the relative number of features associated to a given filter compare to the original image so as to put more emphasis on it.
+		Two mechanisms were implemented. The first one is an additional layer in the feature descriptions part and only works on subsets of the  feature vectors. The second compression layer is situated after the traditional RandConv and works on the whole learning matrix.
 		
 		\paragraph{Feature subvector compression.}
 		In this variant, we treat all the feature subvector separately. A subvector corresponds to the contiguous part of a subwindow feature vector related to one filter and pooling. The idea was to reduce the number of variables of such subvectors while losing as little information as possible. In order to accomplish that, we reduce the number of variable by selecting only one or two colors by pixel. The variables are chosen so that neighbor pixels of the same row have not the same color missing. In that way, we rely on spatial redundancy to limit the loss of information. This is illustrated by figure \ref{fig:imgDescCompression}. The compression rate is of $\frac{3}{2}$ for a low compression keeping two colors by pixel or $\frac{3}{1}$ for a high compression keeping only one color by pixel.
@@ -572,29 +670,40 @@ This chapter is divided into three sections. The first one aims at fully describ
 		In this variant, we work on the whole learning matrix by reducing the number of variable associated to each combination of filter and pooling with the knowledge of all the learning objects. The method can treat the original image independently and the processing of the other group of features can be parallelized. Using the whole learning matrix allow for more sophisticated compression techniques, which can look for structure in the submatrices. This component works like a learning algorithm as well in the sense that it must fit itself on the learning matrix and then remember its choices for the prediction part.
 		The layer is generic meaning that the processing can be parametrized.
 		\par
-		We implemented two such processings. The first one, was simply to draw randomly a subset of different features for each filter. The second one is a bit more elaborated and complex. It computes the principal component analysis (PCA) on all the features of a given filter and selects the first components. Therefore, the new features are linear combination of the original ones. In both cases, the compression rate can be tuned. Although both mechanisms are unsupervised, it is possible to exploit the labels as well.
+		We implemented two such processings. The first one, was simply to draw randomly a subset of different features for each filter. The second one is a bit more elaborated and complex. It computes the principal component analysis (PCA) on all the features of a given filter and selects the first components. Therefore, the new features are linear combination of the original ones. In both cases, the compression rate can be tuned. 
+		\par
+		Although both mechanisms are unsupervised, it is possible to exploit the labels as well.
 		
 		\subsection{Classification schemes}
-		The previous subsections cover the preprocessing steps to go from a database of images to an actual learning matrix. Now is time to delve into the actual classification mechanism. We will use two approaches described in the following. 
+		The previous subsections cover the preprocessing steps to go from a database of images to an actual learning matrix. Now is the time to delve into the actual classification mechanism. We will use two approaches described in the following. 
 		
 			\subsubsection{Direct classification}
 			In this variant, classification will be undertaken by a special kind of classification forest : ensemble of extremely randomized trees, also known as ExtraTrees.
-			\begin{leftbar}
-				\paragraph{Ensemble of extremely randomized trees (ExtraTrees)}
-				\paragraph{}
-				They were introduce in \cite{extratrees} and resemble random forest (\cite{randomforests}). In both kind of forests, only a subset of the features are examined at each node to determine the splitting criterion. This approach is called local random subspace and was introduced in \cite{randomsubspace}. They differ in the following way : while random forests use bagging as an extra mechanism to introduce randomness, the ExtraTrees determine the splitting thresholds randomly. Bagging, for bootstrap aggregating, is the fact of drawing with replacement several learning samples from the original one (boostrap) and combining their predictions (aggregating). 
-						The advantage of ExtraTrees over random forests is threefold. Firstly, the bagging introduces an effective reduction of the learning size of 36\% for each tree. This is not the case of the ExtraTrees, where all trees can learn from the whole learning sample. Secondly, they are much faster to build since we do not need to pick the optimal splitting thresholds of all the variables examined in a node. Lastly, they tend to perform better than their counterpart (\cite{extratrees}).
-			\end{leftbar}
+			%TODO !!!!
 			\paragraph{}
 			In this variant, also called ET-DIC (ExtraTrees for direct image classification), the classification is undertaken by the ExtraTrees directly.
 			Let us note that this scheme allows not only for individual feature importance evaluation but also for filter relevance evaluation by aggregating the importance of all the features corresponding to a given filter. This metric is surely a good candidate for filter co-usefulness evaluation.
-			
-			%Recap hyper-parameters ?
+			\paragraph{}
+			The best results of the ET-DIC strategy in Pixit mode on the CIFAR-10 database was an accuracy rate of 53.67\% (\cite{base}). The corresponding hyper-parameters were the following : 10 fully grown trees, 20 subwindows of 75-100\% of the original size reshaped by nearest neighbor interpolation to 16x16 image described by raw pixel values and inspecting all the features on each node.
 			
 			
 			
 			\subsubsection{Feature learning scheme}
-			Also called ET-FL (ExtraTrees for feature learning) or ERC-forests (Extremely randomized clustering forests), this variant was introduce in \cite{ETFL}. The ExtraTrees are not used as classifier any longer. They form a preprocessing step whose output will constitute the learning matrix of the actual classifier. The idea is to use the trees to form visual dictionary. Specifically, ExtraTrees are used in an unsupervised way by selecting randomly the splitting criterion of each node, a variant called totally randomized trees. The dictionary words are composed of $T$ parts of different sizes, where $T$ is the number of trees. Each part encodes the index of the leave where a given object ends up in a one-hot fashion. Thus, the part corresponding to a tree with $L$ leaves will be a binary word with $L-1$ zeros and $1$ one. In the learning phase, the totally randomized trees are grown from the learning sample, then the same learning sample is propagated down the tree to form the new learning matrix, which is quite sparse. Since we are using several subwindows per original image, we can aggregate by summing bitwisely the words corresponding to the original image to form a new word : an histogram word.
+			Also called ET-FL (ExtraTrees for feature learning) or ERC-forests (Extremely randomized clustering forests), this variant was introduce in \cite{ETFL}. The ExtraTrees are not used as classifier any longer. They form a preprocessing step whose output will constitute the learning matrix of the actual classifier. The idea is to use the trees to form visual dictionary. Specifically, ExtraTrees are used in an unsupervised way by selecting randomly the splitting criterion (including the splitting variable) of each node, a variant called totally randomized trees. The dictionary words are composed of $T$ parts of different sizes, where $T$ is the number of trees. Each part encodes the index of the leave where a given object ends up in a one-hot fashion. Thus, the part corresponding to a tree with $L$ leaves will be a binary word with $L-1$ zeros and $1$ one. In the learning phase, the totally randomized trees are grown from the learning sample, then the same learning sample is propagated down the tree to form the new learning matrix, which is quite sparse. Since we are using several subwindows per original image, we can aggregate by summing bitwisely the words corresponding to the original image to form a new word : an histogram word. This mechanism is sketched at figure \ref{fig:ETFLHisto}.
+		\begin{figure}
+			\begin{subfigure}{.5\textwidth}
+				\centering
+				\includegraphics[width=1.\linewidth]{images/ETFLHisto1.png}
+				\caption{\label{fig:ETFLHisto1}}
+			\end{subfigure}%
+			\begin{subfigure}{.5\textwidth}
+				\centering
+				\includegraphics[width=1.\linewidth]{images/ETFLHisto2.png}
+				\caption{\label{fig:ETFLHisto2}}
+			\end{subfigure}
+			\caption{\label{fig:ETFLHisto}Creation of the histogram words}			
+	\end{figure}
+	
 		The actual classification is then undertaken by a Support Machine Vector. %Describe SVM ?
 		\begin{leftbar}
 			\paragraph{Support Machine Vector (SVM)}
@@ -606,41 +715,40 @@ This chapter is divided into three sections. The first one aims at fully describ
 			\] 
 			Let us note that, with this definition, if two sets are separable, there is an infinity of separation hyperplanes. The goal of the SVM is to choose the one which produces the biggest margin : to maximize the minimum distance from any point of the dataset to the hyperplane.
 			\par
-			So far, the SVM suffers from three limitations. Firstly, it can only tackle linear problems. Secondly, it is restricted to the class of separable problems. Lastly, it is further confined to binary classification problems. 
+			So far, the SVM suffers from three limitations. Firstly, it can only tackle linear problems. Secondly, it is restricted to the class of separable problems. Lastly, it is further confined to binary classifications. 
 			\par
 			The first problem can be overcome either by deriving new features through functions of the original ones or via what is known as the ``kernel trick''. All the computations involving the data are actually inner products. Therefore, one can use any such product instead of the standard scalar one. 
 			\par
 			Overcoming the linear separability is done by introducing slack variables that allows for points to be inside or even cross the margin, behavior which is penalized in the objective function. This soft margin formulation was proposed by \cite{svmsoft}.
 			\par
-			As for the last limitation, several ways around have been proposed and discussed in the literature (\cite{svmmulticlass}). A common scheme is the one-versus-all. It consists on training a SVM for each class. The ith model is learned by considering two classes : the ith original class one the hand and all the other classes on the other hand. The prediction is carried out by assigning the class furthest from its margin.
+			As for the last limitation, several ways around have been proposed and discussed in the literature (see \cite{svmmulticlass}, for example). A common scheme is the one-versus-all. It consists on training a SVM for each class. The ith model is learned by considering two classes : the ith original class one the hand and all the other classes on the other hand. The prediction is carried out by assigning the class furthest from its margin. This is illustrated by figure \ref{fig:SVMOneVersusAll}
 		\end{leftbar}
+		\begin{figure}
+			\centering
+				\includegraphics[width=0.7\textwidth]{images/SVMOneVersusAll.png}
+			\caption{\label{fig:SVMOneVersusAll}One-versus-all multiclass scheme}
+		\end{figure}
 		\paragraph{}
 		Two remarks are in order. Firstly, we have lost the ability the evaluate the feature importances. Secondly, the learning size, and consequently the number of subwindows, is now crucially important. Indeed, of all the parameters, it is one of the most influent parameters on the trees depth, and consequently the number of leaves. 
-		The second most important parameter is the pruning parameter. Pruning is the mechanism of stopping the tree creation before its completion. It can be applied either while developing the tree (pre-pruning) or artificially after the tree creation by cutting of some branches. It obviously also impact dearly the number of leaves. The main goal of pruning is to reduce the model complexity and consequently the overfitting. In the ET-DIC variant, pruning is not necessary because the voting takes care of reducing the overfitting. However, on the data fed to the SVM, there is no automatic overfitting control mechanism and the SVM will suffer from it. Therefore, pruning is also very important for this variant.
+		A second first-class parameter is the one relating to pruning. Pruning is the mechanism of stopping the tree creation before its completion. It can be applied either while developing the tree (pre-pruning) or artificially after the tree creation by cutting of some branches. It obviously also impact dearly the number of leaves. The main goal of pruning is to reduce the model complexity and consequently the overfitting. In the ET-DIC variant, pruning is not necessary because the voting takes care of reducing the overfitting. However, on the data fed to the SVM, there is no automatic overfitting control mechanism and the SVM will suffer from it. Therefore, pruning is also very important for this variant.
 		Last but obviously not least, the number of trees multiply the number of leaves. Therefore, this hyper-parameter is even more sensitive than in the ET-DIC approach.
 		\paragraph{}
-		An extensive comparison of both methods was carried out in \cite{}. They show that, in most cases, the ET-FL approach performs slightly better (3-4\% in average). Nevertheless, ET-FL is more difficult to tune. 
-			%Recap hyper-parameters ?
+		An extensive comparison of both methods was carried out in \cite{base}. They show that, in most cases, the ET-FL approach performs slightly better (3-4\% in average). Nevertheless, ET-FL is more difficult to tune. 
+		\par
+		The best results of the ET-FL strategy in Pixit mode on the CIFAR-10 database was an accuracy of 50.07\% with 10 almost fully grown trees, 20 subwindows of 75-100\% of the original size reshaped in 16x16 by nearest interpolation and using $k = \sqrt{M}$ of inspecting features at each node, where $M$ is the total number of features : 16x16x3. The trees are not totally grown : the minimum number of samples to split a node is fix to 10. Contrary to the majority of cases, the best ET-DIC is better than the best ET-FL for this problem.
+	\par
+	Using the precursory method (equivalent to the custom filter generator) with 9 spatial poolings (3x3 to 7x7 moving windows computing the minimum, maximum and mean) they were able to obtain a significant raise of accuracy, attaining a new record of 74.31\% with 750 trees totally randomized trees, 20 subwindows and a minimum number of samples to split of 750 (\cite{base}).
 			
-	\section{Dataset and environment} %TODO : cite GIGA computer
-	%CIFAR-10 : Several important results. 288 Go de ram dont 145 en shm. 30 core. frequency ?
-	We worked with the CIFAR-10 database (\cite{cifar}). This dataset is composed of a learning set of 50,000 images and a testing set of 10,000 images. They are grouped into 10 mutually exclusive classes : airplane, automobile, bird, cat, deer, dog, frog, horse, ship and trucks. Both subsets contain an equal number of images from each class. The images have all the same size, 32x32, and are RGB.
-	\par
-	This database has been chosen because it was the same one on which the precursory method from \cite{} was tested. In turn, they chose this dataset because their traditional solution had difficulties with it. Their best solution with the ET-DIC method was an accuracy rate of 53.67\%. The corresponding hyper-parameters were the following : 10 fully grown trees, 20 subwindows of 75-100\% of the original size reshaped by nearest neighbor interpolation to 16x16 image described by raw pixel values and inspecting all the features on each node. As for the ET-FL variant, the best result was 50.07\% of accuracy with 10 almost fully grown trees, 20 subwindows of 75-100\% of the original size reshaped in the same manner as before and using $k = \sqrt{M}$ of inspecting features at each node, where $M$ is the total number of features : 16x16x3. The trees are not totally grown : the minimum number of samples to split a node is fix to 10. Contrary to the majority of cases, the best ET-DIC is better than the best ET-FL.
-	Using the aforementioned precursory method, they were able to obtain a significant raise of accuracy, attaining a new record of 74.31\% with 750 trees totally randomized trees and 20 subwindows.
-	\par
-	The best result on this database is an accuracy of 91.2\% and is hold by a convolutional network (\cite{bestcifar}). The top ten best results are above 80\%. Most are neural network solutions and none are based on classification forests.
-	\paragraph{}
-	The learning and testing were carried out on a 64 bits 30-core 2.1 GHz computer with 288 GB of RAM. %TODO elaborate
-	
+
 	
 	\section{Implementation}
 	
 	In this section, we dive into implementation details. We will not go over all the elements in depth again but rather see how the discussions of the previous sections translate into code. In a second subsection we will also develop technical limitations.
 		\subsection{Software architecture}
 		A major concern of the design was to allow as much room as possible for flexibility, so as to be able to develop extensions and variants of the method rapidly. Consequently, the code was split into many classes. A drawback of this is that assembling all the pieces together might be difficult. Factory methods are provided to help with this issue but care must be taken to build up a coherent classifier. We will go back on this in a short while. 
-		The code is written in Python 2.7 and relies and the 0.13.3 version of Scipy (\cite{scipy}), including Numpy 1.8.0. Not all the code is brand new. The ExtraTrees implementation comes from the scikit-learn library (\cite{sklearn}), version 0.15. We also use scikit-learn for SVM classification, although it actually consists of a wrapper to the liblinear library (\cite{base}). The SVM computes the optimal linear soft margin and manages multiclass by one-versus-all.
-				As for the subwindow extraction, it is a reorganization of the Pixit implementation (\cite{base}).
+		\par
+		The code is written in Python 2.7 and relies and the 0.13.3 version of Scipy (\cite{scipy}), including Numpy 1.8.0. Not all the code is brand new. The ExtraTrees implementation comes from the scikit-learn library (\cite{sklearn}), version 0.15. We also use scikit-learn for SVM classification, although it actually consists of a wrapper to the liblinear library (\cite{liblinear}). The SVM computes the optimal linear soft margin and manages multiclass by one-versus-all.
+				As for the subwindow extraction, it is a reorganization of the Pixit implementation (\cite{cytomine}).
 		We will examine the code in a top-down manner and focus on the important classes.
 		\paragraph{}
 		At the top, we find the \texttt{Classifier} class. Its aim is to supervise all the parts. The base class correspond to the ET-DIC variant. The \texttt{RandConvCoordinator} is responsible for all the preprocessing : filtering, pooling, subwindow extraction, feature description. After this step, the \texttt{Classifier} instance delegates the actual classification to a \texttt{BaseEstimator} instance from scikit-learn. In this case, the actual classifier is supposed to be an instance of \texttt{ExtraTreesClassifier}. The \texttt{UnsupervisedVisualBagClassifier} corresponds to ET-FL mode. Between the preprocessing and the classification, we use the \texttt{RandomTreesEmbedding}, a scikit-learn totally randomized trees implementation, to build the histogram which we will then fed to the \texttt{BaseEstimator}, supposed to be a \texttt{LinearSVC} instance.
@@ -656,9 +764,9 @@ This chapter is divided into three sections. The first one aims at fully describ
 		
 		
 		\paragraph{}
-		We now go back to the \texttt{RandConvCoordinator}. Its responsibility is to transform the subwindows into feature vectors. It proceeds by subdividing the dataset to parallelize the transformation. Then, the \texttt{ConvolutionalExtractor} process each image. This entails filtering the image by each element of the \texttt{FiniteFilter} thanks to the \texttt{Convolver}, then applying all the spatial poolings contained in the \texttt{MultiPooler} and finally extracting several subwindows via the \texttt{MultiSWExtractor}. Once all this is done, each filtered and pooled subwindow is passed through the \texttt{Extractor} and reassembled to form a coherent learning submatrix.
+		We now go back to the \texttt{RandConvCoordinator}. Its responsibility is to transform the image database into the learning matrix. It proceeds by subdividing the dataset to parallelize the transformation. Then, the \texttt{ConvolutionalExtractor} process each image. This entails filtering the image by each element of the \texttt{FiniteFilter} thanks to the \texttt{Convolver}, then applying all the spatial poolings contained in the \texttt{MultiPooler} and finally extracting several subwindows via the \texttt{MultiSWExtractor}. Once all this is done, each filtered and pooled subwindow is passed through the \texttt{Extractor} and reassembled to form a coherent learning submatrix.
 		\par
-		The \texttt{FiniteFilter} objects are containers for filters. They pre-generate a finite number of filters thanks to the \texttt{FilterGenerator}. We will come back to those in the next paragraph. If we are working with RGB images, we need to use either a \texttt{Finite3Filter} or a \texttt{Finite3SameFilter}. The former produces a different filter per color component while the latter uses the same filter on each color. Also, we need to use an appropriate \texttt{Convolver}, namely the \texttt{RGBConvolver}.
+		The \texttt{FiniteFilter} objects are containers for filters. They pre-generate a finite number of filters thanks to the \texttt{FilterGenerator}. We will come back to those shortly. If we are working with RGB images, we need to use either a \texttt{Finite3Filter} or a \texttt{Finite3SameFilter}. The former produces a different filter per color component while the latter uses the same filter on each color. Also, we need to use an appropriate \texttt{Convolver}, namely the \texttt{RGBConvolver}.
 		\par
 		The subwindow extraction is carried out by the \texttt{MultiSWExtractor} whose sole purpose is to keep track of the subwindows to extract for the set of filtered and pooled images belonging to the same original image. The actual subwindow generation and extraction are delegated to the \texttt{SubWindowExtractor}.
 		\par
@@ -692,7 +800,9 @@ This chapter is divided into three sections. The first one aims at fully describ
 		
 		
 		\paragraph{}
-		The \texttt{MultiPooler} class involved in the \texttt{RandConvCoordination} is a container of spatial poolings. As the figure \ref{fig:uml-pooling} depicts, our two groups of spatial poolings are presents.
+		The \texttt{MultiPooler} class involved in the \texttt{RandConvCoordinator} is a container of spatial poolings. As the figure \ref{fig:uml-pooling} depicts, our two groups of spatial poolings are presents.
+		\par
+		Other classes are also present to take care of lesser chores, such as loading the data to the right format, logging the progress and so on.
 		
 		
 		\begin{figure}
@@ -701,22 +811,16 @@ This chapter is divided into three sections. The first one aims at fully describ
 			\caption{UML representaiton of the spatial poolings}
 			\label{fig:uml-pooling}
 		\end{figure}
-		
-		
-		\paragraph{}
-		Other classes are also present to take care of lesser chores, such as loading the data to the right format, logging the progress and so on.
-		
+			
 		
 		\subsection{\label{sub:TechnicalIssues}Technical issues}
-		The main limitation we will face is memory. The ExtraTrees implementation require 32-bits floats and the SVM, 64-bits floats. However, in the case of the ET-FL, the matrix is mostly sparse on therefore the 64-bits floats requirement of the SVM will not be troublesome. Thus, the space cost bottleneck is the input of the ExtraTrees, which require to hold all the data in memory. Considering 100 filters, 1 spatial pooling, subwindows resized in 16x16, 3 colors, 10 subwindows and the whole learning set (50,000 images) the RandConv method will produce 153.6 GB of data. For 39 filters (the custom filters plus the original image) and 20 subwindows with 9 spatial poolings (the configuration of the best results of \cite{base}), 1,1 TB would be required. Since we are limited to 288 GB, we will not be able to reproduce such a configuration.
+		The main limitation we will face is memory. The ExtraTrees implementation require 32-bits floats and the SVM, 64-bits floats. However, in the case of the ET-FL, the matrix is mostly sparse on therefore the 64-bits floats requirement of the SVM will not be troublesome. Thus, the space cost bottleneck is the input of the ExtraTrees, which require to hold all the data in memory. Considering 100 filters, 1 spatial pooling, subwindows resized in 16x16, 3 colors, 10 subwindows and the whole learning set (50,000 images), the RandConv method will produce 153.6 GB of data. For 39 filters (the custom filters plus the original image) and 20 subwindows with 9 spatial poolings (the configuration of the best results of \cite{base}), 1,1 TB would be required. Since we are limited to 288 GB, we will not be able to reproduce such a configuration.
 		\par
 		One way of sidestepping this limitation is to build several forests with a different subset of the features, a variant which might be called ``global random subset'' (GRS) of features. 
 		In the case of the RandConv this can easily be done by choosing a subset of filters for each forest.
-		\par
-		More generally, a great care has been devoted to limiting memory consumption as much as possible, such as loading the images only on request and avoiding useless copy as much as possible. 
 		
 		\paragraph{}
-		To a lesser extend, the time complexity will be an hindrance. It will not actually prevent any computation but we will have to plan carefully the experiment to carry out. For instance, our first example, which produces 153.6 GB of data, takes between 5h and 12h depending on the machine load.
+		To a lesser extent, the time complexity will be an hindrance. It will not actually prevent any computation but we will have to plan carefully the experiment to carry out. For instance, our first example, which produces 153.6 GB of data, takes between 5h and 12h depending on the machine load.
 		
 	\section{Hyper-parameters summary}
 	Before elaborating on the results, we will rapidly summarize all the hyper-parameters involved with the RandConv framework.
@@ -764,7 +868,7 @@ This chapter is divided into three sections. The first one aims at fully describ
 		\end{itemize}
 	\end{itemize}
 	
-	As we can see, the number of hyper-parameters is already large. We can divide them in two categories. On the one hand, we have structural parameters and on the other, traditional hyper-parameters. Structural parameters have a more profound impact than traditional ones. The filter generator and its random law and the number and type of spatial poolings form the structural parameters. Conceptually at least, changing one of them is closer to changing the classification method than only one of its hyper-parameters.
+	As we can see, the number of hyper-parameters is already large. We can divide them in two categories. On the one hand, we have structural parameters and on the other, traditional hyper-parameters. Structural parameters have a more profound impact than traditional ones. The filter generator and its random law with the number and type of spatial poolings form the structural parameters. Conceptually at least, changing one of them is closer to changing the classification method than only one of its hyper-parameters.
 	\paragraph{}
 	Three of the ExtraTrees hyper-parameters are used to control the pruning : the maximum depth, the minimum sample split and the minimum sample per leaf. The difference between the last two is that the first one does not attempt to split a node whose number of samples are under the given threshold, while the second does the split but rollback if any of the children are under the threshold. 
 	\paragraph{}
@@ -805,19 +909,19 @@ This chapter is divided into three sections. The first one aims at fully describ
 
 
 %================================================================================================================		
-\chapter{Result analysis}
-In this chapter, we describe the experiments conducted with our new classification method and analyze their results. The chapter is divided into two sections. The first one tackles the direct classification scheme (ET-DIC), where the forest of extremely randomized trees serves as classificator. The second section describes the other variant where the extremely randomized trees are used to create a visual dictionary (ET-FL), while the actual classification is undergone by a support vector machine.
+\chapter{\label{chap:results}Result analysis}
+In this chapter, we describe the experiments conducted with our new classification method and analyze their results. The chapter is divided into two sections. The first one tackles the direct classification scheme (ET-DIC), where the forest of extremely randomized trees serves as classifier. The second section describes the other variant where the totally randomized trees are used to create a visual dictionary (ET-FL), while the actual classification is undergone by a support vector machine.
 \par
 When the hyper-parameters value are not explicit, the default values are to be assumed (table \ref{tab:DefaultValuesForHyperParameters} of page \pageref{tab:DefaultValuesForHyperParameters}).
 %describe the succession of experiment
 	\section{Direct classification scheme}
 	
 		\subsection{Accuracy as a function of the learning set size}
-		Our first experiment will be to measure how the accuracies of the different methods evolve as a function of the learning set size. We will test the RandConv method with both types of pooling mechanisms (aggregation and moving window). The aggregation pooling uses a neighborhood of 2x2 while the moving windows are of size 3x3. Both poolings uses an averaging function. We will limit ourselves to the zero-perturbed filter generator for now. In both cases, the same 100 filter are drawn. The 10 extracted subwindows are resized to 16x16. Consequently there are $(16 \times 16 \times 100 \text{ filters} \times 1 \text{ pooling})\times 3 \text{ colors} = 76,800$ features. The accuracy is measured on the whole testing set composed of 10,000 images. The\texttt{pixit} method will serve as reference.
+		Our first experiment will be to measure how the accuracies of the different methods evolve as a function of the learning set size. We will test the RandConv method with both types of pooling mechanisms (aggregation and moving window). The aggregation pooling uses a neighborhood of 2x2 while the moving windows are of size 3x3. Both poolings uses an averaging function. We will limit ourselves to the zero-perturbed filter generator for now. In both cases, the same 100 filter are drawn. The 10 extracted subwindows are resized to 16x16. Consequently there are $(16 \times 16 \times 100 \text{ filters} \times 1 \text{ pooling})\times 3 \text{ colors} = 76,800$ features. The accuracy is measured on the whole testing set composed of 10,000 images. The Pixit method will serve as reference. The RandConv method will be abbreviated by rci, for RandConv with original image.
 		\paragraph{}
-		We measure the accuracy for the learning set sizes of 500, 5,000, 10,000, 20,000, 30,000, 40,000 and 50,000. The result of this experiment is depicted by figure \ref{fig:accFLSsize}. The conclusion is clear : the aggregation pooling mechanism is not working (0.38 of accuracy). Although being of the smallest interesting size, the non-overlapping neighborhood windows already lose too much of the information. One might argue that using 3x3 moving subwindows allow for that variant to capture more of the spatial structure than 2x2 neighborhood. However, this does not seem to be the case as using 3x3 neighborhoods yields a lower accuracy of 0.35 for the whole learning set. Therefore, the bad performances of the aggregation mechanism must indeed comes from its abusive spatial compression. This is unfortunate because those poolings suffered less from the rescaling of the extracted subwindows. Considering the gap of accuracy between both methods, the following experiments will focus on the moving window poolings.
+		We measured the accuracy for the learning set sizes of 500, 5,000, 10,000, 20,000, 30,000, 40,000 and 50,000. The result of this experiment is depicted by figure \ref{fig:accFLSsize}. The conclusion is clear : the aggregation pooling mechanism is not working (maximum of 0.38 of accuracy). Although being of the smallest interesting size, the non-overlapping neighborhood windows already lose too much of the information. One might argue that using 3x3 moving subwindows allow for that variant to capture more of the spatial structure than 2x2 neighborhood. However, this does not seem to be the case as using 3x3 neighborhoods yields a lower accuracy of 0.35 for the whole learning set. Therefore, the bad performances of the aggregation mechanism must indeed comes from its abusive spatial compression. This is unfortunate because those poolings suffered less from the rescaling of the extracted subwindows. Considering the gap of accuracy between both methods, the following experiments will focus on the moving window poolings.
 		\par
-		Other observations are worth mentioning. Firstly, the ``good'' RandConv method performs well. It is consistently better than the \texttt{pixit}, although the difference might not be worth the trouble. The RandConv methods takes several hours whereas the \texttt{pixit} requires a couple of minutes at most. 
+		Other observations are worth mentioning. Firstly, the ``good'' RandConv method performs well. It is consistently better than the Pixit, although the difference might not be worth the trouble. The RandConv methods takes several hours whereas the Pixit requires a couple of minutes at most. 
 		%Secondly, around 30,000 training images the accuracy rate slows down. This indicates that learning set is big enough to create models of the appropriate complexity.
 		Secondly, the graph shows the impact of using only a subset of the data. This information is important in case of hyper-parameter optimization, for instance, where some of the data must be set aside as validation set.
 		
@@ -828,7 +932,7 @@ When the hyper-parameters value are not explicit, the default values are to be a
 		\end{figure}
 		
 		\paragraph{}
-		Our best result so far is an accuracy of 0.515 due to the RandConv method with moving windows for spatial pooling. The \texttt{pixit} methods with the same parameters yields an accuracy of 0.50, while its best result is 0.53 for 20 subwindows, 10 trees and a minimum sample to split of 10. We will now analyze the variability of the method and how the method varies with some its hyper-parameters.
+		Our best result so far is an accuracy of 0.5151 due to the RandConv method with moving windows for spatial pooling. The Pixit methods with the same parameters yields an accuracy of 0.50, while its best result is 0.5367 for 20 subwindows, 10 trees and a minimum sample to split of 10. We will now analyze the variability of the method and how the method reacts to some its hyper-parameters variations.
 		%Validate small sized filters
 		
 		\subsection{\label{subsec:ETDICVariability}Variability}
@@ -901,10 +1005,9 @@ When the hyper-parameters value are not explicit, the default values are to be a
 		\par
 		A look at the confusion matrices exposes more variability, notably on the diagonal. Despite the accuracy stability, the models are not exactly equivalent. This suggests that combining them or resorting to more trees will allow for some accuracy gain.
 		\par
-		Let us digress on the filter importances. From figure \ref{fig:FIVarTree}, we can see that several filters have a high importance ; of the same order of magnitude than the original image (filter 0). On the other hand, some filters bring little to no information in the classification process. Either these filters are not (co-)useful or the trees are too small to incorporate their usefulness. In regard to the correlations between tests, however, the co-usefulness and complexity hypotheses are less likely. If it were one of these problems, the low-rated filters would have developed on different trees and therefore the filter importance profiles would be less similar. Therefore, the most likely hypothesis is that those filters are simply not useful. Inspecting them in parallel of the best ones might reveal information about the classification task. In any case, removing them to make room for more interesting filters can only improve accuracy. Sadly, the gain might not be as substantial as we may hope. Indeed, the current accuracy gain compare to the \texttt{pixit} is marginal, even though we already have many filters whose importance rivals the original image. 
+		Let us digress on the filter importances. From figure \ref{fig:FIVarTree}, we can see that several filters have a high importance ; of the same order of magnitude than the original image (filter 0). On the other hand, some filters bring little to no information in the classification process. Either these filters are not (co-)useful or the trees are too small to incorporate their usefulness. In regard to the correlations between tests, however, the co-usefulness and complexity hypotheses are less likely. If it were one of these problems, the low-rated filters would have developed on different trees and therefore the filter importance profiles would be less similar. Therefore, the most likely hypothesis is that those filters are simply not useful. Inspecting them in parallel of the best ones might reveal information about the classification task. In any case, removing them to make room for more interesting filters can only improve accuracy. Sadly, the gain might not be as substantial as we may hope. Indeed, the current accuracy gain compare to the Pixit is marginal, even though we already have many filters whose importance rivals the original image. 
 		\par
 		The overall conclusion is the following. For a given learning matrix, increasing the number of trees should not impact the filter importances because they are already quite stable. On the other hand, it should increase the accuracy because the models are not equivalent. The same conclusions should hold for the local random subspace size $k$, at least for the filter importances. In both cases, a decrease of the parameters may affect both the accuracy and filter profile. This variability analysis bring less insight to the minimum number of samples to split a node, $n_{min}$. Finally, as far as the accuracy and filter importances are concerned, the forest variability is negligible.
-	
 
 		\paragraph{}
 		We now turn to the variability produced by the RandConv with the other parameters fixed to their default values. There are three sources of variability :
@@ -917,7 +1020,7 @@ When the hyper-parameters value are not explicit, the default values are to be a
 		
 		As we have just seen, the last source of variability is negligible, therefore, we will mainly assess the first two ones. We ran 10 more tests whose accuracies are shown in table \ref{tab:VarZeropertAcc}. Test 0 corresponds to our previous test. Once again, more tests would be required to establish a proper confidence interval but the variability, although more important than previously, seems to be quite low. Tests number 0 and number 1 are particularly good. Nevertheless, this has to be put in perspective : such low range of accuracies, although always welcome for a practical application, is not really significant in our context.
 		\par
-		Since we are using different filters, the importance profiles will be different from one another. Figure \ref{fig:FIGVar} illustrates this for the tests number 1, 5, 6 and 10. We expect the ideal situation to be when all the filters have the roughly same importances. Nevertheless, how the filter importances influence the accuracy in other circumstances is unclear and cannot be determined from the importance profile. This is made clearer by comparing the cumulative importances of several tests. Figure \ref{fig:FIGVarCumHist} depicts the situation for tests number 0, 1 and 6. For the 30 most influential filters, test 6 is between the other two curves, therefore we cannot predict anything about the accuracy. After that point, test 6 depicts a greater cumulative filter importance. This situation also implies that there are more lowly important filter in test 6 than test 0 or 1. Once again, we cannot deduce anything from it because test 1 is also greater than test 0 in term of both the cumulative filter importance and accuracy. Besides, the cumulative profile of test 5 is nearly identical to the one of test 0. Therefore, it is impossible to assess finely the accuracy from the importance profile. This conclusion is also backed up by the areas under the curves.
+		Since we are using different filters, the importance profiles will be different from one another. Figure \ref{fig:FIGVar} illustrates this for the tests number 1, 5, 6 and 10. We expect the ideal situation to be when all the filters have the roughly same importances. Nevertheless, how the filter importances influence the accuracy in other circumstances is unclear and cannot be determined from the importance profile. This is made clearer by comparing the cumulative importances of several tests. Figure \ref{fig:FIGVarCumHist} depicts the situation for tests number 0, 1 and 6. For the 30 most influential filters, test 6 is between the other two curves. After that point, test 6 depicts a greater cumulative filter importance. This situation also implies that there are more lowly important filter in test 6 than test 0 or 1. We cannot deduce anything from it because test 1 is also greater than test 0 in term of both the cumulative filter importance and accuracy. Besides, the cumulative profile of test 5 is nearly identical to the one of test 0. Therefore, it is impossible to assess finely the accuracy from the importance profile. This conclusion is also backed up by the areas under the curves.
 		
 		
 		\begin{table}
@@ -1045,7 +1148,7 @@ When the hyper-parameters value are not explicit, the default values are to be a
 		
 		
 		\subsection{Influence of the minimum number of samples to split}
-		This parameter control the model complexity. In the previous experiments, the trees were fully grown ($n_{min} = 2$) and variability reduction was achieve through the smoothing effect of the forests prediction aggregation. Still, the model might be too complex to begin with, thus requiring either some pruning or more trees. Adding more trees did improve the model accuracy but, considering this has several impacts, we do not yet know whether we produce too complex models. So as to dissipate doubts, we tested the following values for this hyper-parameter : 2, 10, 50, 500. The corresponding accuracies are : 0.515, 0.512, 0.498, 0.453. Once again we see that the default value performs well. In other words, Besides, pruning too much the trees is harmful : the models are not complex enough any longer.
+		This parameter control the model complexity. In the previous experiments, the trees were fully grown ($n_{min} = 2$) and variability reduction was achieve through the smoothing effect of the forests prediction aggregation. Still, the model might be too complex to begin with, thus requiring either some pruning or more trees. Adding more trees did improve the model accuracy but, considering this has several impacts, we do not yet know whether we produce too complex models. So as to dissipate doubts, we tested the following values for this hyper-parameter : 2, 10, 50, 500. The corresponding accuracies are : 0.515, 0.512, 0.498, 0.453. Once again we see that the default value performs well. Besides, pruning too much the trees is harmful : the models are not complex enough any longer.
 		
 	\begin{figure}
 		\begin{subfigure}{.5\textwidth}
@@ -1111,9 +1214,9 @@ When the hyper-parameters value are not explicit, the default values are to be a
 		
 		
 	\subsection{Influence of the number of filters}
-	Our expectation regarding the number of filters is that, with few of them, the accuracy might be better or worse than the \texttt{pixit}'s depending on the filter usefulnesses. Too many useless filters would hinder the process. With many filters, however, there should be enough usefulness altogether to be able to beat the \texttt{pixit} systematically. The accuracy should increase accordingly with the number of filters as long as the learning set size allows for complex-enough model. However, from the comment on the variability (subsection \ref{subsec:ETDICVariability}), we suspect that we will reach an upper bound quite fast. 
+	Our expectation regarding the number of filters is that, with few of them, the accuracy might be better or worse than the Pixit's depending on the filter usefulnesses. Too many useless filters would hinder the process. With many filters, however, there should be enough usefulness altogether to be able to beat the Pixit systematically. The accuracy should increase accordingly with the number of filters as long as the learning set size allows for complex-enough model. However, from the comment on the variability (subsection \ref{subsec:ETDICVariability}), we suspect that we will reach an upper bound quite fast. 
 	\par
-	From a more practical point of view, we will have to limit ourselves to 180 filters, which should not be a problem if we were right about the upper bound. Table \ref{tab:AccFNbFilt} presents the accuracies for 10, 38 (the number of filters in the custom generator),100, 120, 180 filters. As we can see, from 100 filters on, there is no accuracy gain and the filter and subwindow variabilities are responsible for the slight differences of accuracy. We would need a more profound analysis to determine whether or not the accuracy obtained with 38 filters is statically inferior to the 100 filter case's. In any case, it is closer to the accuracy of the 100 filters than of the 10 filters.
+	From a more practical point of view, we will have to limit ourselves to 180 filters, which should not be a problem if we were right about the upper bound. Table \ref{tab:AccFNbFilt} presents the accuracies for 10, 38 (the number of filters in the custom generator), 100, 120, 180 filters. As we can see, from 100 filters on, there is no accuracy gain and the filter and subwindow variabilities are responsible for the slight differences of accuracy. We would need a more profound analysis to determine whether or not the accuracy obtained with 38 filters is statically inferior to the 100 filter case's. In any case, it is closer to the accuracy of the 100 filters than of the 10 filters.
 	
 	\begin{table}
 		\centering
@@ -1188,7 +1291,7 @@ When the hyper-parameters value are not explicit, the default values are to be a
 	\end{figure}
 	
 	\paragraph{}
-	Judging from those experiments, we can see that identity-distance generator do worse than our usual generator. This is also visible from the filter profiles (figure \ref{fig:FIIdDist}), where we can see much more variability than what we were accustomed.
+	Judging from those experiments, we can see that identity-distance generator do worse than our usual generator. This is also visible from the filter profiles (figure \ref{fig:FIIdDist}), where we can see much more variability than what we were accustomed to.
 	Considering the variability we have observed previously, the situation is unclear for the other generators, although the identity-perturbed suites tends to do well. In any case, the filter generator is not the most influential parameter. This is an important, disturbing and revealing result. Our initial expectation laid in the opposite direction : the filter generators were the cornerstone of the method. A good choice (or combination) of generators producing many filters should have helped unveil useful information for the classification. Sadly, this did not turn out as expected. Our last hope to get significant accuracy improvements now resides in the non-linear layer of spatial pooling.
 	The bright side is that we do not have to worry much about optimizing those parameters ; the zero-perturbed or identity-perturb generators will do just fine.
 	
@@ -1209,14 +1312,14 @@ When the hyper-parameters value are not explicit, the default values are to be a
 	\end{itemize}
 	We can clearly see that the poolings have a beneficial effect on the accuracy, in particular the maximum. %test with maximal pooling on zeropert
 	%rci_zeropert_120_filters no poolings : 0.4912
-	Choosing the best pooling must either be done by cross-validation or not done : using several poolings should not reduce the accuracy dramatically. The main drawback of this last option is that the memory might be better used in another fashion. Using the same pooling at different spatial scales may or may not be interesting.
+	Choosing the best pooling must either be done by cross-validation or not done at all : using several poolings should not reduce the accuracy dramatically. The main drawback of this last option is that the memory might be better used in another fashion. Using the same pooling at different spatial scales may or may not be interesting.
 
 	
 	\paragraph{}
 	We now turn to the filter importances. Figure \ref{fig:FIPool} depicts the profiles for the single pooling cases. Some filters always have a high or low importance. For other filters, however, the importances vary. Concerning the profiles, if not the accuracies, the no pooling and average strategies are close, with a correlation of 0.954 (see the correlation matrix on table \ref{tab:FIPoolCorr}). The major difference comes from the number 20, which is a high pass filter. %Have a look at frequency response with and without the averaging
 	The other pieces of information given by the correlation matrix are as one might expect.
 	More interesting, we can observe that the profiles can be importantly influenced by the pooling, which means that it does bring information and increase some filter usefulnesses. In the occasion of filter 28 (the west compass gradient mask), the maximum pooling even goes as far as giving it more importance than other filters appreciated by the remaining poolings. 
-	Interpreting the cumulative importance diagram (figure \ref{fig:FIPool}) is, once more, complicated and we will limit ourselves to the following observation. The maximum pooling is the closet example to a straight line (the ideal situation where every filter has the same importance) we have seen so far and also scores the best accuracy for now. Despite the closeness of the no pooling strategy, however, it does not score a high accuracy.
+	Interpreting the cumulative importance diagram (figure \ref{fig:FIPool}) is, once more, complicated and we will limit ourselves to the following observation. The maximum pooling is the closet example to a straight line (the ideal situation where every filter has the same importance) we have seen so far and also scores the best accuracy for now. Despite the closeness, the no pooling strategy does not score a high accuracy, however.
 	
 	
 	\begin{figure}
@@ -1303,12 +1406,12 @@ When the hyper-parameters value are not explicit, the default values are to be a
 	
 	
 	\subsection{Influence of the compression}
-	In this subsection, we tackle the subvector compression. We ran the RandConv method with the default value except for the feature extraction which uses color compression. The accuracy results for keeping only one and keeping two colors per pixel are respectively 0.5041 and 0.5112. In both cases the confusion matrix seems to be in accordance with those of the previous experiments. Other experiments tends to produce the same kind of results : one color per pixel is usually slightly inferior to two colors per pixel. In any case, the influence of the compression is marginal. This can be exploited to reallocate the freed memory to more interesting parameters.
+	In this subsection, we tackle the subvector compression. We ran the RandConv method with the default value except for the feature extraction which uses color compression. The accuracy results for keeping only one or two colors per pixel are respectively 0.5041 and 0.5112. In both cases the confusion matrix seems to be in accordance with those of the previous experiments. Other experiments tends to produce the same kind of results : one color per pixel is usually slightly inferior to two colors per pixel. In any case, the influence of the compression is marginal. This can be exploited to reallocate the freed memory to more interesting parameters.
 	\par
 	The conclusion on filter importances is as usual : compression does not influence much the filter profiles.
 	
 	\subsection{\label{subsec:UpperBound}Empirical upper bound on the accuracy}
-	We have now had a tour on the influence of the hyper-parameters. Clearly, the most important is the spatial pooling. Then comes the number of trees, the parameters $k$ and the number of subwindows. Sadly, the number of filters and the filter generator play a less important role in the process.
+	We have now had a tour on the influence of the hyper-parameters. Clearly, the most important is the spatial pooling. Then comes the number of trees, the parameters $k$ and the number of subwindows. Sadly, the number of filters and the kind of filter generator play a less important role in the process.
 	Based on this observation we can now test an optimal set of parameters. The accuracy we will obtain will be subject to some bias because we did not determine this set of parameters on a independent database. However, the bias should be small. Figure \ref{fig:accFLSsize} about the influence of the database size on accuracy suggests that a database of 40,000 images is representative enough. Furthermore, our observation were either confirming our intuitions or too clear to be dependent on the learning samples only. Finally, we will consider this result for what it is : an upper bound on the accuracy.
 	\par
 	We chose to use the custom filters with two poolings, a 7x7 minimum and maximum. We impose compression so as to have 2 colors per original pixel. We use the remaining memory to extract 30 subwindows per images. We built 500 trees with a value of $k$ of 500 as well. The final accuracy scores \textbf{0.613}. Of course, this made for a long learning phase (approximately 1 day).
@@ -1316,8 +1419,8 @@ When the hyper-parameters value are not explicit, the default values are to be a
 	\subsection{Improvements}
 	We thought of two improvements for the ET-DIC methods. 
 	
-	\paragraph{Useful filter selection}
-	The first one was to use the trees to assess the filter usefulness, keep only the best of them and proceeds in an iterative manner to build a stock a ``good'' filters. This selection can be conducted in an unsupervised way and therefore would not suffer from selection bias. The good news brought by the previous section is that we do not need much resources to assess the filter usefulness : the filter profiles are quite stable and can be assessed with totally randomized trees using only 5 subwindows and compression so as to quicken the process and/or allow for more filters. We need to use the same spatial poolings, however. The very bad news is that the filter generation mechanism do not seem to matter as much as we had originally hoped. 
+	\paragraph{Useful filter selection.}
+	The first one was to use the trees to assess the filter usefulness, keep only the best of them and proceeds in an iterative manner to build a stock a ``good'' filters. This selection can be conducted in an unsupervised way and therefore would not suffer from selection bias. The good news brought by the previous section is that we do not need much resources to assess the filter usefulness : the filter profiles are quite stable and can be assessed with totally randomized trees using only 5 subwindows and compression so as to quicken the process and/or allow for more filters. We need to use the same spatial poolings, however. The very bad news is that the filter generation mechanism do not seem to matter as much as we had originally hoped and consequently, the accuracy gain is expected to be small.
 	\par
 	We ran the following experiment : the default classification with a preprocessing for choosing the 100 best filters out of 1000 random ones. The preprocessing is conducted as proposed by totally randomized trees with only 5 subwindows per images and a compression of 1 color per pixel. 
 	Figure \ref{fig:FIOpti} depicts the filter profile. As we can see, we have a very regular profile, much more than what we ever have encountered before. Besides, there is no single useless filter, which is also a first. The accuracy is, however a mild 0.5137 ; not even the best for the default classification.
@@ -1332,9 +1435,9 @@ When the hyper-parameters value are not explicit, the default values are to be a
 
 	
 	
-	\paragraph{Global random subspace}
+	\paragraph{Global random subspace.}
 	%Observation on variability
-	The second improvement consists of growing forests independently with different sets of filters, as was mentioned in subsection \ref{sub:TechnicalIssues} about technical issues. The results are aggregated by averaging the class probabilities of a given image. In other words, we vote the class over the several forests.
+	The second improvement consists on growing forests independently with different sets of filters, as was mentioned in subsection \ref{sub:TechnicalIssues} about technical issues. The results are aggregated by averaging the class probabilities of a given image. In other words, we vote the class over the several forests.
 	Considering the independence of the filters of two different forests and our discussion about the number of filters, we foresee that the main accuracy gain will actually comes from the augmentation of the total number of trees. 
 	\par
 	We made our experiment using the following filter generators (unmentioned parameters are left to their default values) : 
@@ -1359,10 +1462,16 @@ When the hyper-parameters value are not explicit, the default values are to be a
 	\section{Feature learning scheme}
 	The previous section focused on the ET-DIC pros and cons. We now turn to the ET-FL mode. In this mode, we use totally randomized trees to build a visual dictionary and the actual classification is carried out by a SVM. 
 	\paragraph{}
-	This mode is less prone to a deep analysis of the hyper-parameters' influences. The parameter $k$ is fixed to 1, and the number of subwindows, the number of trees and the minimum number of samples to split all influence the number of leaves in a well-understood fashion. An increase in the first two will produce an increase of the number of leaves and ultimately of the discriminant power. The number of subwindows will be severely limited by the memory requirement while the number of trees limitation will be the computational time, although to a lesser extent. A good tradeoff must then be found between the number of subwindows and number of filters and spatial poolings. From the information we gathered in the last section, our expectations are that the number of subwindows will be much more important than the number of filters. The compression can be reused in order to free some extra memory if need be.
+	This mode is less prone to a deep analysis of the hyper-parameters' influences. The parameter $k$ is fixed to 1, and the number of subwindows, the number of trees and the minimum number of samples to split all influence the number of leaves in a well-understood fashion. An increase in the first two will produce an increase of the number of leaves and ultimately of the discriminant power. The number of subwindows will be severely limited by the memory requirement while the number of trees limitation will be the computational time, although to a lesser extent. A good tradeoff must then be found between the number of subwindows and number of filters and spatial poolings. From the information we gathered in the last section, we can say that the number of subwindows will be much more important than the number of filters. The compression can be reused in order to free some extra memory if need be.
 	Since we are not averaging the results any longer, we have lost the ability to reduce overfitting and must resort to pruning in order to limit the complexity. Usually, the optimal pruning should be obtained by cross-validation. However, for our database, a good value of $n_{min} = 500$ has already been established (\cite{base}). 
+	\paragraph{}
+	Before starting, let us remember those two results already established for the ET-FL mode. In traditional Pixit, an accuracy of 0.5007 was achieved with 10 almost fully grown trees and 20 subwindows. As for the use of filters and several poolings, the record was of 0.7431 with 750 totally randomized trees, 20 subwindows and $n_{min} = 500$. 
+	
+	
 	%describe the succession of experiment
-	\subsection{Accuracy}
+	
+	
+	%\subsection{Accuracy}
 	
 	
 \chapter{Conclusion and perspective}
