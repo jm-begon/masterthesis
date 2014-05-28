@@ -271,11 +271,11 @@ A major concern of the field is dedicated to the image descriptors. Be they stru
 \par
 On the one hand, learning the descriptors allows for a fully generic approach. In this case, the descriptors and rules are usually learned together by the learning algorithm. This can be done by supplying the image in the coarsest acceptable form to the learning algorithm. This is usually done by vectorizing the image in some fashion, in row prime order for instance, so that feature vectors are composed of the raw pixels. This representation is not lossless, however, as some of the spatial structure is lost in the process. Even resorting to better spatial indexation scheme, such as Hilbert or Peano curves, does not help ; the problem lies in the learning algorithm which have not been designed to incorporate directly spatial relationships. Not all this information is lost, though, but rather presents itself in the form of correlations instead of spatial autocorrelations. Whether or not this can be exploited is algorithm-dependent. From now on, we will designate this approach by ``raw-pixels''.
 \par
-On the other hand, we find custom descriptors, which are derived from the images. Such descriptors have two advantages compare to the previous ones. Firstly, they are usually less numerous, meaning that the problem is cast to a lesser dimensional space. These are usually easier and more efficiently solved. The second advantage is that they can focus on relevant information regarding the classification task. This last characteristic hides the main drawback of this scheme : information fed to the learning is biased and can miss some important information. So as to limit these side effects and keep some generality, the descriptor can stay at a reasonable level of abstraction. Example of this is using an histogram as descriptor (\cite{histoIntersectSVM}). Concerning the spatial structure, it is \textit{de facto} lost but can be purposefully reintegrated in the form of dedicated descriptors (see for example \cite{geostat}). From now on, we will designate this approach by ``custom descriptors''.
+On the other hand, we find custom descriptors, which are derived from the images. Such descriptors have two advantages compare to the previous ones. Firstly, they are usually less numerous, meaning that the problem is cast to a lesser dimensional space. These are usually easier and more efficiently solved. The second advantage is that they can focus on relevant information regarding the classification task. This last characteristic hides the main drawback of this scheme : information fed to the learning is biased and can miss some important information. So as to limit these side effects and keep some generality, the descriptor can stay at a reasonable level of abstraction. Example of this is using an histogram as descriptor (\cite{histoIntersectSVM}). Concerning the spatial structure, it is \textit{de facto} lost but can be purposefully reintegrated in the form of dedicated descriptors (see for example \cite{geostat}). From now on, we will designate this approach by ``custom descriptors'' or representation learning.
 
 \paragraph{}
-In the three decades of investigation, the scientific community has been prolific on the topic. Therefore, we will focus on several interesting techniques instead of making a detailed tour of the subject.
-Three such methods, relating to the present work, will be inspected : Pixit, bag of visual words and convolutional network.
+In decades of investigation, the scientific community has been prolific on the topic. Therefore, we will focus on several interesting techniques instead of making a detailed tour of the subject.
+Three such methods, relating to the present work, will be inspected : Pixit, bag of visual words and convolutional neural network.
 
 \subsection{\label{subsec:Pixit}Pixit}
 This raw-pixels classification scheme was introduce in \cite{pixit}. Pixit consists on extracting patches from the original images to build a second database with more objects. The subwindows can either have a predefined, fixed size or can be drawn randomly, possibly within a range of predefined sizes. In the latter case, the patches must be rescaled to a fix size before being described by their raw pixel values so as to form a coherent learning matrix. It is possible to apply other transformation to the subwindows so as to introduce invariances in the learning set, for example towards rotations (\cite{recapPixit}). In case of multicolor images, the method offers to work either in the RGB or HVS color space. 
@@ -291,22 +291,84 @@ Depending on the patches' size and the number of colors, the feature vectors can
 	\par
 	The advantage of ExtraTrees over random forests is threefold. Firstly, the bagging introduces an effective reduction of the learning size of 36\% for each tree. This is not the case of the ExtraTrees, where all trees can learn from the whole learning sample. Secondly, they are much faster to build since we do not need to pick the optimal splitting thresholds of all the variables examined in a node. Lastly, they tend to perform better than their counterpart (\cite{extratrees}).
 \end{leftbar}
-The method has been extensively studied in the domain of image classification (\cite{base}). It can go beyond this field, though. In \cite{PixitImgRetrieval}, they venture in the field of image retrieval by developing a similarity measure thanks to both the subwindows and the ExtraTrees. In \cite{PixitLabeling}, they turned to image annotation, \textit{i.e.} pixel-wise labeling. By examining the correctly classified subwindows, it is possible to visualize region of interests and thus get insight about the classification task.
+The method has been extensively studied in the domain of image classification (\cite{base}). It can go beyond this field, though. In \cite{PixitImgRetrieval}, they venture in the field of image retrieval by developing a similarity measure thanks to both the subwindows and the ExtraTrees. In \cite{PixitLabeling}, they turned to image annotation, \textit{i.e.} pixel-wise labeling. By examining the correctly classified subwindows, it is possible to visualize region of interests and thus get insight about the classification task. In essence, generating many subwindows is akin to producing local descriptors, although it is unlikely that they will all have the same usefulness. This shortcoming can be overcome by supplying control information, so as to automatically discard irrelevant subwindows.
 
 
 
-\subsection{Bag of visual words}
+\subsection{\label{subsec:BagOfVisualWord}Bag of visual words}
 %Bridge back and forth : ECR and zebra-fish
-Bag of words takes its root in text classification. Formally, a bag, or multiset, is a pair $(S, n)$, where $S$ is a set and $n : S \rightarrow \mathbb{N}_0^+$ is a numbering function. As texts are structured objects, like images, they also need descriptors. A common practice is to represent them by an histogram over the words they contain ; a bag-of-word descriptor.
+Bag of words takes its root in text classification. As texts are structured objects, like images, they also need descriptors. A common practice is to represent them by an histogram over the words they contain ; a bag-of-word descriptor. Formally, a bag, or multiset, is a pair $(S, n)$, where $S$ is a set and $n : S \rightarrow \mathbb{N}_+$ is a numbering function. Representing several texts is done by establishing a reference dictionary $S$, specifying an ordering of the words and counting how many times each appears in a given text. Common words are usually discarded so as to focus on specific vocabulary. As we can see, no spatial information is kept.
+\paragraph{}
+The same principle can be applied in image classification, leading to custom descriptors. The main difficulty lies in the fact that the set of so-called ``visual words'', \textit{i.e.} the dictionary, is not known in advance, or well defined, for that matter. Consequently some preprocessing is require to come up with the dictionary. The most popular solution relies on interest point detection followed by vector quantization (\cite{BagOfWords}). 
 \par
-The same principle can be applied in image classification, leading to custom descriptors. The main difficulty lies in the fact that the set of so-called ``visual words'', \texit{i.e.} the dictionary is not known in advance, or for that matter, well defined. 
-%Interest point <-> Vector quantization \cite{BagOfWords} + link with subwindows <-> interest points 
-%Link with pixit \cite{ETFL} + SVM
+Interest point detection is usually carried out by the Scale Invariant Feature Transform (SIFT) method (\cite{SIFT}, \cite{SIFTExplained}) or its PCA variant : PCA-SIFT (\cite{PCASIFT}). They work by locating ``keypoints'' : points of interest stable with respect to scale and orientation shifts. The keypoints are then described by a normalized histogram of orientation gradient in the form of a 128 element feature vectors, for the traditional SIFT and in a more compact variant for the PCA-SIFT.
+\par
+Processing the images will lead to a set of different keypoints and cardinality, just as texts were composed of different words and of varying length. We thus have to fix a dictionary, and by extension an ordering of the words. The situation is slightly different than in the text situation because minor variation of a given keypoint descriptors are possible, whereas, spelling mistakes aside, this is not the case with texts. This is where vector quantization comes into play. During the learning phase, a given number of prototypes are constructed by way of the K-means clustering algorithm. The prototypes are the visual words and form the dictionary. The ordering is arbitrary but must be fix once and for all by assigning an index number, or position, to each prototype. Once this dictionary has been built, each learning keypoint is associated to the closest visual word. Then an histogram is built for each image by counting all its visual words. These histograms constitute the learning matrix, which can be fed to any learning algorithm. Classifying a new image is done symmetrically : the keypoints are detected, they are assigned to a visual word and the histogram word is computed to form the feature vector, which can then be fed to the classifier.
+\paragraph{}
+An important bridge between this and the Pixit method was raised by \cite{ETFL}, in the form of extremely randomized clustering forests (ERC-forests). Although anchored in the bag of visual words framework, they switch the SIFT keypoints detection for an iterative mechanism involving random subwindows. As for the dictionary construction, it does not rely on K-means any longer but rather on extremely randomized trees. The dictionary words are composed of $T$ parts of different sizes, where $T$  is the number of trees.
+Each part encodes the index of the leaves where a given object ends up in a one-hot fashion. Thus, the part corresponding to a tree with $L$ leaves will be a binary word with $L-1$ zeros and $1$ one. Once again, the final features vector of a given images is the histogram computed over all the subwindows belonging to that image.
+It was later incorporated in the Pixit framework, although without the iterative loop regarding the extraction of patches in order to fit better in the framework. This mechanism is sketched at figure \ref{fig:ETFLHisto}. 
+\par
+In this context, it is known as ET-FL (ExtraTrees for feature learning) by opposition to ET-DIC (ExtraTrees for direct image classification). This variant was thoroughly studied in \cite{base}. They show that, in most cases, the ET-FL approach performs slightly better (3-4\% in average). Nevertheless, ET-FL is more difficult to tune.
 
-\subsection{Convolutional network}
+
+		\begin{figure}
+			\begin{subfigure}{.5\textwidth}
+				\centering
+				\includegraphics[width=1.\linewidth]{images/ETFLHisto1.png}
+				\caption{\label{fig:ETFLHisto1}}
+			\end{subfigure}%
+			\begin{subfigure}{.5\textwidth}
+				\centering
+				\includegraphics[width=1.\linewidth]{images/ETFLHisto2.png}
+				\caption{\label{fig:ETFLHisto2}}
+			\end{subfigure}
+			\caption{\label{fig:ETFLHisto}Creation of the histogram words}			
+	\end{figure}
+	
+		In both ET-FL and ERC-forests cases, the actual classifier is a support vector machine (SVM).
+		\begin{leftbar}
+			\paragraph{Support Machine Vector (SVM)}
+			\paragraph{}
+			Support machine vector take their roots in the work of \cite{svm} and were originally designed as linear classifier for linearly separable tasks. A dataset with binary classes is said to be linearly separable if it is possible to draw an hyperplane in the space of regular features which ``separates'' the two subsets of data.
+			More formally, the hyperplane $H_{w,b} = \{x \in \mathbb{R}^n | w^T x = b\}$ with $w \in \mathbb{R}^n$ and $b \in \mathbb{R}$ separates two points $x_1$, $x_2 \in \mathbb{R}^n$ if and only if 
+			\[
+				(w^T x_1 - b)(w^T x_2 - b) < 0
+			\] 
+			Let us note that, with this definition, if two sets are separable, there is an infinity of separation hyperplanes. The goal of the SVM is to choose the one which produces the biggest margin : to maximize the minimum distance from any point of the dataset to the hyperplane.
+			\par
+			So far, the SVM suffers from three limitations. Firstly, it can only tackle linear problems. Secondly, it is restricted to the class of separable problems. Lastly, it is further confined to binary classifications. 
+			\par
+			The first problem can be overcome either by deriving new features through functions of the original ones or via what is known as the ``kernel trick''. All the computations involving the data are actually inner products. Therefore, one can use any such product instead of the standard scalar one. 
+			\par
+			Overcoming the linear separability is done by introducing slack variables that allows for points to be inside or even cross the margin, behavior which is penalized in the objective function. This soft margin formulation was proposed by \cite{svmsoft}.
+			\par
+			As for the last limitation, several ways around have been proposed and discussed in the literature (see \cite{svmmulticlass}, for example). A common scheme is the one-versus-all. 
+		\end{leftbar}
+
+
+
+\subsection{Convolutional neural network}
 %Box neural network \cite{ConvNet} <-- zip code
+Convolutional neural networks (convnets or CNNs) were first introduced in the context of zip code recognition \cite{ConvNet}. This raw-pixels technique is a special case of neural network.
+\begin{leftbar}
+	\paragraph{Neural network}
+	\paragraph{}
+	The perceptron model was introduced by \cite{perceptron}. It is based on a two layer network of ``neurons''. A neuron's goal is to come up with a separating hyperplane. Unlike SVM, the hyperplane might not maximize the margin. Indeed, the hyperplane optimization is carried by (stochastic) gradient descent, implying that the learning can be done online. Online learning, by opposition to batch learning, do not require to have the whole dataset in memory. A sigmoid-like function usually encapsulate the hyperplane so as to introduce non-linearities in the model.
+	\par
+	The creation of the backpropagation algorithm (\cite{backpropagation}) allowed for the creation of more complex networks called multi-layer perceptron (MLP). The backpropagation allows for each neuron to learn its local model with the only need of neighbors' information. It is a two-phase algorithm. During the forward pass, the hyperplane coefficients are known and a global output can be computed by propagating the input through the network. The error can then be computed and a correction is applied to the last layer. Then a compensation can be applied to the previous layer and so on up till the first layer. 
+\end{leftbar}	
+Convnets hold the accuracy records on a variety of image classification benchmarks and contests (\cite{ImagenetRecord}, \cite{convnetRecord} and \cite{bestcifar}, for instance). They differ from regular neural networks in the two ways.
+\par
+Firstly, their numerous layers are partitioned into two categories. The lower layers are not fully connected while the uppers, if any, are. The partial connectivity is not made at random but rather enforces that the neurons work on spatially local information. The neurons of a given low layer are partitioned into subsets, also called feature maps. Each element of a subset shares the same spatial weights and together cover the whole input image with a great amount of overlapping, hence their name. So far, the input of layer $k$ is the output of layer$k-1$ ; several images (one per feature map) ultimately derived from the original image. Since the different layers are designed to work at different spatial scales, the level of detail of the previous layer is usually not required. Therefore, the image is usually undersampled rather than working with bigger feature maps.
+\par
+Secondly, a a function of spatial pooling is introduced between the layers. It consists on aggregating the results spatially close feature maps. It serves two purposes. The first one is to introduce translation invariance and other spatial robustnesses in the model. Indeed, the exact position of a given characteristics is usually much less important than knowing whether or not it appears. The second goal of the spatial pooling is linked to the undersampling between layer : it prevents that mechanism to miss an important characteristic by a poor choice of pixels. Usual spatial pooling functions are the average and maximum. The latter usually serves as presence/absence detector and introduces more non-linearity in the model. In any case, the undersampling and the spatial pooling can be conducted at the same time by defining a neighborhood window : neurons of the same feature maps which fall into the neighborhood window aggregate their results together an produce a common output. Depending on how the neighborhood windows overlap, the change in resolution might be important or not.
+
 
 \paragraph{}
+As we can see, the network complexity is substantial. For example, in the case of the zip code problem (\cite{ConvNet}), there are already 2592 parameters to optimize even though there is only 12 feature maps and three layers. Nowadays problems account for much greater complexity. Consequently, running time of convnets are usually important. Fast and efficient GPU implementation are now available (\cite{GPUConvnet}) but one has also to take into account the time necessary to optimize the network structure and other hyper-parameters, a much more complex task. As far as accuracy is concerned, convenets is the best. However, they are not really practical solutions, as yet. Numerous work in the field of optimization are currently helping with these issues, with remarkable success. Nevertheless, we are not yet in a situation where convnets are turnkey solutions, situation which may well never happen. 
+\par
+In the meantime, at the least, it would be nice to dispose of a solution which combine convnets accuracy with ease-of-use of, say, the Pixit method. Such a method would also allows to bridge to the bag of visual words framework through the ET-FL mode of the Pixit. Producing this missing link is the central objective of the present work. How we propose to proceed will be made clearer in the next chapter.
 %Missing link
 %Cite other stuff
 
@@ -678,63 +740,28 @@ This chapter is divided into three sections. The first one aims at fully describ
 		The previous subsections cover the preprocessing steps to go from a database of images to an actual learning matrix. Now is the time to delve into the actual classification mechanism. We will use two approaches described in the following. 
 		
 			\subsubsection{Direct classification}
-			In this variant, classification will be undertaken by a special kind of classification forest : ensemble of extremely randomized trees, also known as ExtraTrees.
-			%TODO !!!!
-			\paragraph{}
-			In this variant, also called ET-DIC (ExtraTrees for direct image classification), the classification is undertaken by the ExtraTrees directly.
+			In this ET-DIC (ExtraTrees for direct image classification) variant, the classification is undertaken by the ExtraTrees directly.
 			Let us note that this scheme allows not only for individual feature importance evaluation but also for filter relevance evaluation by aggregating the importance of all the features corresponding to a given filter. This metric is surely a good candidate for filter co-usefulness evaluation.
 			\paragraph{}
 			The best results of the ET-DIC strategy in Pixit mode on the CIFAR-10 database was an accuracy rate of 53.67\% (\cite{base}). The corresponding hyper-parameters were the following : 10 fully grown trees, 20 subwindows of 75-100\% of the original size reshaped by nearest neighbor interpolation to 16x16 image described by raw pixel values and inspecting all the features on each node.
 			
 			
-			
 			\subsubsection{Feature learning scheme}
-			Also called ET-FL (ExtraTrees for feature learning) or ERC-forests (Extremely randomized clustering forests), this variant was introduce in \cite{ETFL}. The ExtraTrees are not used as classifier any longer. They form a preprocessing step whose output will constitute the learning matrix of the actual classifier. The idea is to use the trees to form visual dictionary. Specifically, ExtraTrees are used in an unsupervised way by selecting randomly the splitting criterion (including the splitting variable) of each node, a variant called totally randomized trees. The dictionary words are composed of $T$ parts of different sizes, where $T$ is the number of trees. Each part encodes the index of the leave where a given object ends up in a one-hot fashion. Thus, the part corresponding to a tree with $L$ leaves will be a binary word with $L-1$ zeros and $1$ one. In the learning phase, the totally randomized trees are grown from the learning sample, then the same learning sample is propagated down the tree to form the new learning matrix, which is quite sparse. Since we are using several subwindows per original image, we can aggregate by summing bitwisely the words corresponding to the original image to form a new word : an histogram word. This mechanism is sketched at figure \ref{fig:ETFLHisto}.
-		\begin{figure}
-			\begin{subfigure}{.5\textwidth}
-				\centering
-				\includegraphics[width=1.\linewidth]{images/ETFLHisto1.png}
-				\caption{\label{fig:ETFLHisto1}}
-			\end{subfigure}%
-			\begin{subfigure}{.5\textwidth}
-				\centering
-				\includegraphics[width=1.\linewidth]{images/ETFLHisto2.png}
-				\caption{\label{fig:ETFLHisto2}}
-			\end{subfigure}
-			\caption{\label{fig:ETFLHisto}Creation of the histogram words}			
-	\end{figure}
-	
-		The actual classification is then undertaken by a Support Machine Vector. %Describe SVM ?
-		\begin{leftbar}
-			\paragraph{Support Machine Vector (SVM)}
-			\paragraph{}
-			Support machine vector take their roots in the work of \cite{svm} and were originally designed as linear classifier for linearly separable tasks. A dataset with binary classes is said to be linearly separable if it is possible to draw an hyperplane in the space of regular features which ``separates'' the two subsets of data.
-			More formally, the hyperplane $H_{w,b} = \{x \in \mathbb{R}^n | w^T x = b\}$ with $w \in \mathbb{R}^n$ and $b \in \mathbb{R}$ separates two points $x_1$, $x_2 \in \mathbb{R}^n$ if and only if 
-			\[
-				(w^T x_1 - b)(w^T x_2 - b) < 0
-			\] 
-			Let us note that, with this definition, if two sets are separable, there is an infinity of separation hyperplanes. The goal of the SVM is to choose the one which produces the biggest margin : to maximize the minimum distance from any point of the dataset to the hyperplane.
-			\par
-			So far, the SVM suffers from three limitations. Firstly, it can only tackle linear problems. Secondly, it is restricted to the class of separable problems. Lastly, it is further confined to binary classifications. 
-			\par
-			The first problem can be overcome either by deriving new features through functions of the original ones or via what is known as the ``kernel trick''. All the computations involving the data are actually inner products. Therefore, one can use any such product instead of the standard scalar one. 
-			\par
-			Overcoming the linear separability is done by introducing slack variables that allows for points to be inside or even cross the margin, behavior which is penalized in the objective function. This soft margin formulation was proposed by \cite{svmsoft}.
-			\par
-			As for the last limitation, several ways around have been proposed and discussed in the literature (see \cite{svmmulticlass}, for example). A common scheme is the one-versus-all. It consists on training a SVM for each class. The ith model is learned by considering two classes : the ith original class one the hand and all the other classes on the other hand. The prediction is carried out by assigning the class furthest from its margin. This is illustrated by figure \ref{fig:SVMOneVersusAll}
-		\end{leftbar}
+			In this ET-FL (ExtraTrees for feature learning) variant, the ExtraTrees are not used as classifier any longer but rather form a preprocessing step whose output will constitute the learning matrix of the actual classifier. It has been described in subsection \ref{subsec:BagOfVisualWord} about bag of visual words. The slight novelty is that ExtraTrees are used in an unsupervised way by selecting randomly the splitting criterion (including the splitting variable) of each node, a variant called totally randomized trees. Totally randomized trees as classifier usually perform less well than ExtraTrees (\cite{extratrees}). However, in the current context, the actual classification is delegated to a SVM. The gain of using totally randomized trees is computational.
+		\par
+		Since we are in the presence of more than two classes, we will resort to the one-versus-all scheme. It consists on training a SVM for each class. The ith model is learned by considering two classes : the ith original class on the one hand and all the other classes on the other hand. The prediction is carried out by assigning the class furthest from its margin. This is illustrated by figure \ref{fig:SVMOneVersusAll}
 		\begin{figure}
 			\centering
 				\includegraphics[width=0.7\textwidth]{images/SVMOneVersusAll.png}
 			\caption{\label{fig:SVMOneVersusAll}One-versus-all multiclass scheme}
 		\end{figure}
+		
 		\paragraph{}
-		Two remarks are in order. Firstly, we have lost the ability the evaluate the feature importances. Secondly, the learning size, and consequently the number of subwindows, is now crucially important. Indeed, of all the parameters, it is one of the most influent parameters on the trees depth, and consequently the number of leaves. 
+		An important remark is in order, the learning size, and consequently the number of subwindows, is now crucially important. Indeed, it is one of the most influent parameters on the trees' depth, and consequently the number of leaves. 
 		A second first-class parameter is the one relating to pruning. Pruning is the mechanism of stopping the tree creation before its completion. It can be applied either while developing the tree (pre-pruning) or artificially after the tree creation by cutting of some branches. It obviously also impact dearly the number of leaves. The main goal of pruning is to reduce the model complexity and consequently the overfitting. In the ET-DIC variant, pruning is not necessary because the voting takes care of reducing the overfitting. However, on the data fed to the SVM, there is no automatic overfitting control mechanism and the SVM will suffer from it. Therefore, pruning is also very important for this variant.
 		Last but obviously not least, the number of trees multiply the number of leaves. Therefore, this hyper-parameter is even more sensitive than in the ET-DIC approach.
+		
 		\paragraph{}
-		An extensive comparison of both methods was carried out in \cite{base}. They show that, in most cases, the ET-FL approach performs slightly better (3-4\% in average). Nevertheless, ET-FL is more difficult to tune. 
-		\par
 		The best results of the ET-FL strategy in Pixit mode on the CIFAR-10 database was an accuracy of 50.07\% with 10 almost fully grown trees, 20 subwindows of 75-100\% of the original size reshaped in 16x16 by nearest interpolation and using $k = \sqrt{M}$ of inspecting features at each node, where $M$ is the total number of features : 16x16x3. The trees are not totally grown : the minimum number of samples to split a node is fix to 10. Contrary to the majority of cases, the best ET-DIC is better than the best ET-FL for this problem.
 	\par
 	Using the precursory method (equivalent to the custom filter generator) with 9 spatial poolings (3x3 to 7x7 moving windows computing the minimum, maximum and mean) they were able to obtain a significant raise of accuracy, attaining a new record of 74.31\% with 750 trees totally randomized trees, 20 subwindows and a minimum number of samples to split of 750 (\cite{base}).
@@ -1472,6 +1499,28 @@ When the hyper-parameters value are not explicit, the default values are to be a
 	
 	
 	%\subsection{Accuracy}
+	
+	\begin{table}
+		\centering
+			\begin{tabular}{c|c|c}
+			\hline
+			Test number & Accuracy & Number of leaves\\
+			\hline \hline
+			1  & 0.6355 & 1,840,523\\
+			2 & 0.6349 & 1,845,322 \\
+			3 & 0.6381 & 1,815,057 \\
+			4 & 0.6352 & 1,840,463 \\
+			5 & 0.6436 & 1,828,582 \\
+			6 & 0.6392 & 1,805,235 \\
+			7 & 0.6406 & 1,833,373\\
+			8 & 0.6412 & 1,837,801\\
+			\hline
+			\hline
+			Standard deviation & 0.003 & 13042.06\\
+			\hline
+			\end{tabular}
+		\caption{\label{tab:BagVarTreesOnly}Accuracy and number of leaves variabilities due to the totally randomized trees (ET-FL mode)}
+	\end{table}
 	
 	
 \chapter{Conclusion and perspective}
