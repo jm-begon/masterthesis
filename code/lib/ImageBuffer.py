@@ -13,9 +13,10 @@ except ImportError:
 import numpy as np
 
 import NumpyToPILConvertor
+import structShuffler as ss
 
 __all__ = ["ImageBuffer", "FileImageBuffer", "ImageLoader",
-           "NotCMapImageLoader", "NumpyImageLoader"]
+           "NotCMapImageLoader", "NumpyImageLoader", "ShufflerImageBuffer"]
 
 
 def _pilNbBands(img):
@@ -326,3 +327,19 @@ class FileImageBuffer(ImageBuffer):
 
 
 #TODO add exceptions and stuff
+
+class ShufflerImageBuffer(ImageBuffer):
+
+    def __init__(self, imageBuffer, height, width, rate=0.5):
+        self._imgBuff = imageBuffer
+        self._shuffler = ss.ImageSuffler(height, width, rate)
+
+    def size(self):
+        return self._imgBuff.size()
+
+    def get(self, index):
+        img = self._imgBuff.get(index)
+        return self._shuffler.shuffle(img)
+
+    def getLabels(self):
+        return self._imgBuff.getLabels()
